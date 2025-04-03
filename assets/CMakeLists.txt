@@ -1,0 +1,16 @@
+include(../embed.cmake)
+add_library(Assets STATIC)
+
+file(GLOB SHADERS */*.vert */*.frag)
+foreach(SHADER ${SHADERS})
+    get_filename_component(NAME "${SHADER}" NAME)
+    string(REPLACE "." "_" NAME ${NAME})
+    embed(Assets "${SHADER}" "Shaders" "const char" "${NAME}")
+endforeach()
+
+file(GLOB TEXTURES */*.png */*.jpg */*.jpeg */*.tiff */*.bmp)
+foreach(TEXTURE ${TEXTURES})
+    get_filename_component(NAME "${TEXTURE}" NAME)
+    string(REPLACE "." "_" NAME ${NAME})
+    embed(Assets "${TEXTURE}" "Textures" "const unsigned char" "${NAME}")
+endforeach()
