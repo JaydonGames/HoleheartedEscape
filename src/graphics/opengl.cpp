@@ -377,6 +377,10 @@ namespace OpenGL {
         return glGetUniformLocation(this->id, name);
     }
 
+    void Program::bind_uniform_buffer(const char* name, unsigned int binding){
+        glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name), binding);
+    }
+
     Program::operator bool() const{
         return this->id;
     }

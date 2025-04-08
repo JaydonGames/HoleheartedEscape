@@ -20,6 +20,7 @@ namespace Render {
         program.bind();
         for (int i = 0; i < this->max_textures; ++i)
             this->program.get_uniform(("tex[" + std::to_string(i) + "]").c_str()).store(i);
+        program.bind_uniform_buffer("quad_block", 0);
     } 
 
     void BatchRenderer::push(const Rect& pos, const Rect& tex_coords, Texture& tex){
@@ -44,14 +45,15 @@ namespace Render {
     void BatchRenderer::render(){
         this->program.bind();
         this->vao.bind();
-        this->ssbo.bind(OpenGL::Buffer::Type::shader);
-        this->ssbo.bind(OpenGL::Buffer::Type::shader, 0);
+        this->ubo.bind(OpenGL::Buffer::Type::uniform);
+        this->ubo.bind(OpenGL::Buffer::Type::uniform, 0);
 
         if (vao_size < render_queues.size())
             this->fill_vao(2*render_queues.size());
 
         std::vector<std::pair<unsigned int, unsigned int>> tex_sizes;
 
+        //TODO: implement max 500 quads for each render call
         size_t group_count = std::ceil(this->textures.size()/static_cast<double>(max_textures));
         for (size_t group = 0; group < group_count; ++group){
             size_t texture_begin = group*max_textures;
@@ -65,7 +67,7 @@ namespace Render {
 
             size_t queue_begin = group ? queue_ends[group-1] : 0;
             size_t size = (queue_ends.size() > group ? queue_ends[group] : render_queues.size()) - queue_begin;
-            this->ssbo.fill(OpenGL::Buffer::Type::shader, render_queues.data() + queue_begin, size*sizeof(Quad));
+            this->ubo.fill(OpenGL::Buffer::Type::uniform, render_queues.data() + queue_begin, size*sizeof(Quad));
             this->tex_sizes.store<2>(&tex_sizes[0].first, tex_sizes.size());
             this->vao.draw_triangles(size*6);
 

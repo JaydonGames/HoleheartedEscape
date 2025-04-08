@@ -1,4 +1,4 @@
-#version 430
+#version 420
 layout(location = 0) in vec2 vert;
 flat out uint tex_id;
 out vec2 tex_xy;
@@ -14,8 +14,8 @@ struct Quad {
     uint tex;
 };
 
-layout(std430, binding = 0) buffer quads_layout {
-    Quad quads[];
+layout (std140) uniform quad_block {
+    Quad quads[500];
 };
 
 void main() {

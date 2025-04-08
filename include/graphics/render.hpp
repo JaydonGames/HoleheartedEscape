@@ -23,7 +23,8 @@ namespace Render {
 
         struct Quad {
             Rect pos, tex_coords;
-            unsigned int tex, padding;
+            unsigned int tex;
+            unsigned int p1, p2, p3;
         };
 
         typedef std::unordered_map<Texture*, size_t> index_map_t;
@@ -35,7 +36,7 @@ namespace Render {
         OpenGL::Program program;
         OpenGL::Uniform screen_size, tex_sizes;
         OpenGL::VertexArray vao;
-        OpenGL::Buffer ssbo;
+        OpenGL::Buffer ubo;
 
         size_t vao_size = 0;
         int max_textures;

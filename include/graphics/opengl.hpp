@@ -160,6 +160,7 @@ namespace OpenGL {
 
         void bind();
         Uniform get_uniform(const char* name);
+        void bind_uniform_buffer(const char* name, unsigned int binding);
 
         operator bool() const;
         bool operator !() const;

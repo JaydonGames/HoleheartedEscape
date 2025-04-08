@@ -1,4 +1,4 @@
-#version 430
+#version 420
 flat in uint tex_id;
 in vec2 tex_xy;
 out vec4 color;
