@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <stdexcept>
 
+struct SDL_Window;
+
 namespace OpenGL {
     typedef unsigned int id_t;
     
