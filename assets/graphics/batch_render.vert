@@ -1,4 +1,4 @@
-#version 420
+#version 410
 layout(location = 0) in vec2 vert;
 flat out uint tex_id;
 out vec2 tex_xy;

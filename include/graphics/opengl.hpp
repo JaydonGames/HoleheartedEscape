@@ -23,7 +23,7 @@ namespace OpenGL {
     public:
         /* The window must be created with SDL_WINDOW_OPENGL and
          * not already have an attached OpenGL context */
-        Context(struct SDL_Window* window, int major = 4, int minor = 2, bool core = true);
+        Context(SDL_Window* window, int major = 4, int minor = 1, bool core = true);
         void bind();
 
         /* Returns false if vsync isn't supported */
