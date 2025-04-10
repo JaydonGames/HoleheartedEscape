@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
 project("HoleheartedEscape")
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 add_compile_definitions(SDL_MAIN_HANDLED)
 
 if (WIN32)

@@ -1,6 +1,7 @@
 #include <array>
 #include <cmath>
 #include <memory>
+#include <string>
 #include "graphics/render.hpp"
 #include "assets.hpp"
 

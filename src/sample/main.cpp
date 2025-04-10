@@ -26,6 +26,11 @@ int main(){
                 renderer.push({150+150*x, 150+150*y, 100, 100}, {x*tex1.width()/4, y*tex1.height()/3, tex1.width()/4, tex1.height()/3}, tex1);
         renderer.render();
         context.swap_buffer();
+        
+        SDL_Event e;
+        SDL_PollEvent(&e);
+        if (e.type == SDL_QUIT)
+            break;
     }
 
     SDL_Quit();
