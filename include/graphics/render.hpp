@@ -18,7 +18,7 @@ namespace Render {
             : program(program), camera(camera) {}
         template<typename T>
         Camera(T& renderer) : Camera(renderer.get_camera()){}
-        void move(int x, int y);
+        void set(int x, int y);
 
     private:
         OpenGL::Program& program;

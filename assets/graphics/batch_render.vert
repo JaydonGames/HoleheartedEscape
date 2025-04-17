@@ -27,7 +27,7 @@ layout (std140) uniform quad_block {
 void main() {
     Quad quad = quads[gl_VertexID/4];
 
-    vec2 pos = quad.pos + vert*quad.scale - camera;
+    vec2 pos = quad.pos + vert*quad.scale - camera + screen/2;
     pos *= 2.0/screen;
     pos -= 1;
     pos.y *= -1;

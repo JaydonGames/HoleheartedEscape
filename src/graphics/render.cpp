@@ -7,7 +7,7 @@
 
 namespace Render {
 
-    void Camera::move(int x, int y){
+    void Camera::set(int x, int y){
         this->program.bind();
         this->camera.store(x, y);
     }
