@@ -36,7 +36,7 @@ namespace Render {
     class BatchRenderer {
     public:
         BatchRenderer();
-        void push(const Rect& pos, const Rect& tex_coords, Texture& tex, unsigned int flags);
+        void push(const Rect& pos, const Rect& tex_coords, Texture& tex, unsigned int flags = 0);
         void render();
         void set_canvas(unsigned int x, unsigned int y);
         inline Camera get_camera(){
