@@ -7,6 +7,12 @@
 
 namespace Render {
 
+    void Camera::move(int x, int y){
+        this->program.bind();
+        this->camera.store(x, y);
+    }
+
+
     /* Replaces '@' in the shader with the max texture count. */
     std::string get_shader(bool frag){
         std::string shader{frag ? Shaders::batch_render_frag : Shaders::batch_render_vert};
@@ -24,16 +30,16 @@ namespace Render {
         program.bind_uniform_buffer("quad_block", 0);
     } 
 
-    void BatchRenderer::push(const Rect& pos, const Rect& tex_coords, Texture& tex){
+    void BatchRenderer::push(const Rect& pos, const Rect& tex_coords, Texture& tex, unsigned int flags){
         index_map_t::iterator iter = this->texture_indices.find(&tex);
 
         if (iter != this->texture_indices.end()){
-            render_queues.emplace_back(pos, tex_coords, iter->second);
+            render_queues.emplace_back(pos, tex_coords, iter->second, flags);
         }
         else{
             int index = this->textures.size() % this->max_textures;
             this->textures.emplace_back(tex);
-            render_queues.emplace_back(pos, tex_coords, index);
+            render_queues.emplace_back(pos, tex_coords, index, flags);
             this->texture_indices[&tex] = index;
 
             if (index == this->max_textures - 1) {

@@ -4,6 +4,7 @@
 #include "graphics/opengl.hpp"
 #include "graphics/render.hpp"
 #include "assets.hpp"
+#include "tiled/map.hpp"
 
 int main(){
     SDL_SetMainReady();
@@ -13,17 +14,35 @@ int main(){
 
     OpenGL::Context context{window};
     Render::BatchRenderer renderer;
-    OpenGL::Texture tex1{Textures::tiles_png, Textures::tiles_png_length};
-    OpenGL::Texture tex2{Textures::square_png, Textures::square_png_length};
+    Render::Camera camera{renderer};
     context.set_clear_color(.5,.5,.5);
     context.enable_vsync();
     renderer.set_canvas(1080, 720);
 
+    Tiled::Map::register_texture("walls_tileset", Textures::walls_tileset);
+    Tiled::Map::register_texture("ground_tileset", Textures::ground_tileset);
+    Tiled::Map::register_tileset("walls_tileset", Tilesets::walls_tileset);
+    Tiled::Map::register_tileset("ground_tileset", Tilesets::ground_tileset);
+    Tiled::Map tilemap{Maps::map};
+
     for (;;) {
         context.clear();
-        for (unsigned int x = 0; x < 4; ++x)
-            for (unsigned int y = 0; y < 3; ++y)
-                renderer.push({150+150*x, 150+150*y, 100, 100}, {x*tex1.width()/4, y*tex1.height()/3, tex1.width()/4, tex1.height()/3}, tex1);
+
+        constexpr int tile_size = 15;
+        for (auto& layer : tilemap.layers){
+            for (int y = 0; y < layer.tiles.size(); ++y){
+                for (int x = 0; x < layer.tiles[y].size(); ++x){
+                    Tiled::Tile& tile = layer.tiles[y][x];
+                    if (tile.empty)
+                        continue;
+                    renderer.push(
+                            Render::Rect{x*tile_size, y*tile_size, tile_size, tile_size}, 
+                            tile.get_coords(), tile.get_texture(), tile.get_flags()
+                    );
+                }
+            }
+        }
+
         renderer.render();
         context.swap_buffer();
         

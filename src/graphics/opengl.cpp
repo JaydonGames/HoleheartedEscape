@@ -5,6 +5,7 @@
 #include <SDL_surface.h>
 #include <SDL_image.h>
 #include "graphics/opengl.hpp"
+#include "assets.hpp"
 
 namespace OpenGL {
 
@@ -78,8 +79,13 @@ namespace OpenGL {
         this->load(data, length);
     }
 
+
+    Texture::Texture(const Textures::texture_t& texture) : Texture(texture.data, texture.length){}
+
     Texture::Texture(Texture&& other){
         this->id = other.release();
+        this->w = other.w;
+        this->h = other.h;
     }
 
     Texture::~Texture(){
@@ -118,10 +124,6 @@ namespace OpenGL {
     void Texture::bind(unsigned int index){
         glActiveTexture(GL_TEXTURE0 + index);
         glBindTexture(GL_TEXTURE_2D, this->id);
-    }
-
-    Texture::operator bool() const{
-        return this->id;
     }
 
     bool Texture::operator !() const{
