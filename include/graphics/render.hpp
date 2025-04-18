@@ -1,15 +1,11 @@
 #pragma once
-#include <functional>
+#include <unordered_map>
 #include <vector>
 #include "opengl.hpp"
+#include "types.hpp"
 
 namespace Render {
     using OpenGL::Texture;
-
-    struct Rect {
-        int x, y, w, h;
-    };
-
 
 
     class Camera {
@@ -26,6 +22,7 @@ namespace Render {
     };
 
 
+
     enum Flags {
         FlipDiagonally = 1<<0,
         FlipX = 1<<1,
@@ -33,10 +30,11 @@ namespace Render {
     };
 
 
+
     class BatchRenderer {
     public:
         BatchRenderer();
-        void push(const Rect& pos, const Rect& tex_coords, Texture& tex, unsigned int flags = 0);
+        void push(const Vec2& pos, const Rect& tex_coords, Texture& tex, unsigned int flags = 0);
         void render();
         void set_canvas(unsigned int x, unsigned int y);
         inline Camera get_camera(){
@@ -45,26 +43,61 @@ namespace Render {
 
     private:
         void fill_vao(size_t quad_count);
-
-        struct Quad {
-            Rect pos, tex_coords;
-            unsigned int tex, flags;
-            unsigned int p1, p2;
-        };
-
-        typedef std::unordered_map<Texture*, size_t> index_map_t;
-        std::vector<Quad> render_queues;
-        std::vector<size_t> queue_ends;
-        std::vector<std::reference_wrapper<Texture>> textures;
-        index_map_t texture_indices;
+        size_t vao_size = 0;
 
         OpenGL::Program program;
         OpenGL::Uniform screen_size, tex_sizes;
         OpenGL::VertexArray vao;
         OpenGL::Buffer ubo;
-
-        size_t vao_size = 0;
         int max_textures;
+        static constexpr unsigned int max_quads = 512;
+        
+        struct Quad {
+            Vec2 pos;
+            Rect tex_coords;
+            unsigned int tex, flags;
+        };
+
+        struct QueueIndices {
+            size_t quad_end, tex_end;
+        };
+
+        std::vector<QueueIndices> queues;
+        std::vector<Quad> quads;
+        std::vector<Texture*> textures;
+        std::unordered_map<Texture*, size_t> texture_cache;
+
+        struct Queue {
+            BatchRenderer& renderer;
+            size_t queue;
+            inline Queue& operator++(){
+                ++this->queue;
+                return *this;
+            }
+
+            inline Queue& operator*(){
+                return *this;
+            }
+
+            inline bool operator !=(const Queue& other){
+                return this->queue != other.queue;
+            }
+
+            inline void render();
+            inline void bind_textures();
+        };
+
+        inline Queue begin(){
+            return {*this, 0};
+        }
+
+        inline Queue end(){
+            return {*this, this->queues.size()};
+        }
+
+        inline void push(Quad);
+        inline void new_queue();
+        inline void clear();
     };
 
 

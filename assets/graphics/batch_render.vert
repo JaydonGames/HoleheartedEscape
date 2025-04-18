@@ -13,7 +13,6 @@ uniform ivec2 camera;
 
 struct Quad {
     ivec2 pos;
-    ivec2 scale;
     ivec2 tex_xy;
     ivec2 tex_wh;
     uint tex;
@@ -21,13 +20,15 @@ struct Quad {
 };
 
 layout (std140) uniform quad_block {
+    /* GL_MAX_UNIFORM_BLOCK_SIZE has a minimum value of 16KiB. 
+     * With sizeof(Quad) == 32, (16*pow(2,10))/sizeof(Quad) == 512 */
     Quad quads[512];
 };
 
 void main() {
     Quad quad = quads[gl_VertexID/4];
 
-    vec2 pos = quad.pos + vert*quad.scale - camera + screen/2;
+    vec2 pos = quad.pos + vert*quad.tex_wh - camera + screen/2;
     pos *= 2.0/screen;
     pos -= 1;
     pos.y *= -1;

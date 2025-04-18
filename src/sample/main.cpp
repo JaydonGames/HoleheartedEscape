@@ -17,7 +17,10 @@ int main(){
     Render::Camera camera{renderer};
     context.set_clear_color(.5,.5,.5);
     context.enable_vsync();
-    renderer.set_canvas(1080, 720);
+    constexpr Render::Vec2 canvas{1080*6, 720*6};
+    context.set_canvas_size(1080, 720);
+    renderer.set_canvas(canvas.x, canvas.y);
+    camera.set(canvas.x/2, canvas.y/2);
 
     Tiled::Map::register_texture("walls_tileset", Textures::walls_tileset);
     Tiled::Map::register_texture("ground_tileset", Textures::ground_tileset);
@@ -28,17 +31,14 @@ int main(){
     for (;;) {
         context.clear();
 
-        constexpr int tile_size = 15;
         for (auto& layer : tilemap.layers){
             for (int y = 0; y < layer.tiles.size(); ++y){
                 for (int x = 0; x < layer.tiles[y].size(); ++x){
                     Tiled::Tile& tile = layer.tiles[y][x];
                     if (tile.empty)
                         continue;
-                    renderer.push(
-                            Render::Rect{x*tile_size, y*tile_size, tile_size, tile_size}, 
-                            tile.get_coords(), tile.get_texture(), tile.get_flags()
-                    );
+                    Render::Rect coords = tile.get_coords();
+                    renderer.push({x*coords.w, y*coords.h}, coords, tile.get_texture(), tile.get_flags());
                 }
             }
         }
