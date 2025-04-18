@@ -101,6 +101,8 @@ namespace Render {
             queue.bind_textures();
             queue.render();
         }
+
+        this->clear();
     }
 
     void BatchRenderer::fill_vao(size_t quad_count){
