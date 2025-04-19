@@ -43,7 +43,6 @@ namespace Render {
 
     private:
         void fill_vao(size_t quad_count);
-        size_t vao_size = 0;
 
         OpenGL::Program program;
         OpenGL::Uniform screen_size, tex_sizes;

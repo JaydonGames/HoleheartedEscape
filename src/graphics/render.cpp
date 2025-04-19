@@ -52,6 +52,8 @@ namespace Render {
         for (int i = 0; i < this->max_textures; ++i)
             this->program.get_uniform(("tex[" + std::to_string(i) + "]").c_str()).store(i);
         program.bind_uniform_buffer("quad_block", 0);
+        this->vao.bind();
+        this->fill_vao(BatchRenderer::max_quads);
     } 
 
     void BatchRenderer::push(const Vec2& pos, const Rect& coords, Texture& tex, unsigned int flags){
@@ -94,9 +96,6 @@ namespace Render {
         this->ubo.bind(OpenGL::Buffer::Type::uniform, 0);
         this->new_queue();
 
-        if (vao_size < quads.size())
-            this->fill_vao(2*quads.size());
-
         for (Queue queue : *this){
             queue.bind_textures();
             queue.render();
@@ -134,7 +133,6 @@ namespace Render {
         OpenGL::Buffer::fill(OpenGL::Buffer::vertex, quads.get(), sizeof(QuadVerts) * quad_count);
         OpenGL::Buffer::fill(OpenGL::Buffer::index, &indices.get()[0][0], sizeof(QuadIndices) * quad_count);
         this->vao.vert_attr<unsigned int[2]>(0);
-        this->vao_size = quad_count;
     }
 
     void BatchRenderer::set_canvas(unsigned int x, unsigned int y){
