@@ -15,6 +15,7 @@ struct texture_t {
 extern texture_t ground_tileset;
 extern texture_t walls_tileset;
 extern texture_t background;
+extern texture_t Crystal;
 } // namespace Textures
 
 namespace Maps {

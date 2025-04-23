@@ -6,14 +6,15 @@
 #include <SDL_events.h>
 #include <SDL_video.h>
 
-const int SCREEN_WIDTH = 1080;
-const int SCREEN_HEIGHT = 720;
+const int SCREEN_WIDTH = 1920;
+const int SCREEN_HEIGHT = 1080;
 
 int main() {
   SDL_SetMainReady();
   SDL_Init(SDL_INIT_VIDEO);
   SDL_Window *window = SDL_CreateWindow(
-      "Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1080, 720,
+      "Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
+      SCREEN_HEIGHT,
       SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
   OpenGL::Context context{window};
@@ -21,8 +22,8 @@ int main() {
   Render::Camera camera{renderer};
   context.set_clear_color(.5, .5, .5);
   context.enable_vsync();
-  constexpr Render::Vec2 canvas{1080, 720};
-  context.set_canvas_size(1080, 720);
+  constexpr Render::Vec2 canvas{SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4};
+  context.set_canvas_size(SCREEN_WIDTH, SCREEN_HEIGHT);
   renderer.set_canvas(canvas.x, canvas.y);
   camera.set(canvas.x / 2, canvas.y / 2);
 
@@ -33,23 +34,25 @@ int main() {
   Tiled::Map tilemap{Maps::map};
 
   OpenGL::Texture bg{Textures::background};
+  OpenGL::Texture player{Textures::Crystal};
 
   for (;;) {
     context.clear();
 
-    /*for (auto& layer : tilemap.layers){*/
-    /*    for (int y = 0; y < layer.tiles.size(); ++y){*/
-    /*        for (int x = 0; x < layer.tiles[y].size(); ++x){*/
-    /*            Tiled::Tile& tile = layer.tiles[y][x];*/
-    /*            if (tile.empty)*/
-    /*                continue;*/
-    /*            Render::Rect coords = tile.get_coords();*/
-    /*            renderer.push({x*coords.w, y*coords.h}, coords,
-     * tile.get_texture(), tile.get_flags());*/
-    /*        }*/
+    /*for (auto &layer : tilemap.layers) {*/
+    /*  for (int y = 0; y < layer.tiles.size(); ++y) {*/
+    /*    for (int x = 0; x < layer.tiles[y].size(); ++x) {*/
+    /*      Tiled::Tile &tile = layer.tiles[y][x];*/
+    /*      if (tile.empty)*/
+    /*        continue;*/
+    /*      Render::Rect coords = tile.get_coords();*/
+    /*      renderer.push({x * coords.w, y * coords.h}, coords,*/
+    /*                    tile.get_texture(), tile.get_flags());*/
     /*    }*/
+    /*  }*/
     /*}*/
     renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
+    renderer.push({16, 16}, {0, 0, 16, 16}, player, 0);
 
     renderer.render();
     context.swap_buffer();
