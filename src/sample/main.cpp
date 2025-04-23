@@ -22,7 +22,7 @@ int main() {
   Render::Camera camera{renderer};
   context.set_clear_color(.5, .5, .5);
   context.enable_vsync();
-  constexpr Render::Vec2 canvas{SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4};
+  constexpr Render::Vec2 canvas{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
   context.set_canvas_size(SCREEN_WIDTH, SCREEN_HEIGHT);
   renderer.set_canvas(canvas.x, canvas.y);
   camera.set(canvas.x / 2, canvas.y / 2);
@@ -33,25 +33,29 @@ int main() {
   Tiled::Map::register_tileset("ground_tileset", Tilesets::ground_tileset);
   Tiled::Map tilemap{Maps::map};
 
+  Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
+  Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
+  Tiled::Map test_map{Maps::test_map};
+
   OpenGL::Texture bg{Textures::background};
   OpenGL::Texture player{Textures::Crystal};
 
   for (;;) {
     context.clear();
 
-    /*for (auto &layer : tilemap.layers) {*/
-    /*  for (int y = 0; y < layer.tiles.size(); ++y) {*/
-    /*    for (int x = 0; x < layer.tiles[y].size(); ++x) {*/
-    /*      Tiled::Tile &tile = layer.tiles[y][x];*/
-    /*      if (tile.empty)*/
-    /*        continue;*/
-    /*      Render::Rect coords = tile.get_coords();*/
-    /*      renderer.push({x * coords.w, y * coords.h}, coords,*/
-    /*                    tile.get_texture(), tile.get_flags());*/
-    /*    }*/
-    /*  }*/
-    /*}*/
     renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
+    for (auto &layer : test_map.layers) {
+      for (int y = 0; y < layer.tiles.size(); ++y) {
+        for (int x = 0; x < layer.tiles[y].size(); ++x) {
+          Tiled::Tile &tile = layer.tiles[y][x];
+          if (tile.empty)
+            continue;
+          Render::Rect coords = tile.get_coords();
+          renderer.push({x * coords.w, y * coords.h}, coords,
+                        tile.get_texture(), tile.get_flags());
+        }
+      }
+    }
     renderer.push({16, 16}, {0, 0, 16, 16}, player, 0);
 
     renderer.render();

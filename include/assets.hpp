@@ -14,6 +14,8 @@ struct texture_t {
 
 extern texture_t ground_tileset;
 extern texture_t walls_tileset;
+
+extern texture_t main_tileset;
 extern texture_t background;
 extern texture_t Crystal;
 } // namespace Textures
@@ -22,6 +24,8 @@ namespace Maps {
 typedef const char map_t[];
 
 extern map_t map;
+
+extern map_t test_map;
 } // namespace Maps
 
 namespace Tilesets {
@@ -29,4 +33,6 @@ typedef const char tileset_t[];
 
 extern tileset_t ground_tileset;
 extern tileset_t walls_tileset;
+
+extern tileset_t main_tileset;
 } // namespace Tilesets
