@@ -53,7 +53,7 @@ namespace Tiled {
     }
 
     Grid<Tile> Map::parse_csv_grid(size_t width, size_t height, const char* csv, const std::vector<std::pair<uint32_t, size_t>>& tileset_gids){
-        Grid<Tile> layer{height, width};
+        Grid<Tile> layer{width, height};
 
         std::stringstream data{csv};
         for (size_t y = 0; y < height; ++y){
