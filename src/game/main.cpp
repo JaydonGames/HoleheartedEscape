@@ -29,12 +29,6 @@ int main() {
     renderer.set_canvas(canvas.x, canvas.y);
     camera.set(canvas.x / 2, canvas.y / 2);
 
-    Tiled::Map::register_texture("walls_tileset", Textures::walls_tileset);
-    Tiled::Map::register_texture("ground_tileset", Textures::ground_tileset);
-    Tiled::Map::register_tileset("walls_tileset", Tilesets::walls_tileset);
-    Tiled::Map::register_tileset("ground_tileset", Tilesets::ground_tileset);
-    Tiled::Map tilemap{Maps::map};
-
     Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
     Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
     Tiled::Map test_map{Maps::test_map};
