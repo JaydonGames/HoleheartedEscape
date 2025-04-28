@@ -1,0 +1,60 @@
+# .clang-format for OpenGL Project (Google-based)
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+ColumnLimit: 120
+# IndentAccessModifiers: true
+SortIncludes: false
+
+# Brace settings
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+
+# Function and parameter settings
+AllowShortFunctionsOnASingleLine: Inline
+AlignAfterOpenBracket: Align
+SpaceBeforeParens: ControlStatements
+SpaceInEmptyParentheses: false
+
+# Template settings
+SpaceAfterTemplateKeyword: false
+AlwaysBreakTemplateDeclarations: Yes
+
+# Namespace settings
+NamespaceIndentation: None
+
+# Constructor initializer settings
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+
+# Pointer alignment
+PointerAlignment: Left
+
+# Container literals
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# Control statement settings
+AllowShortBlocksOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Keep empty line at the start of a block
+KeepEmptyLinesAtTheStartOfBlocks: false
