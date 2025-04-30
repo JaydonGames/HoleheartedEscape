@@ -5,7 +5,7 @@
 class Player {
 public:
     // NOTE: Use constexrp here??
-    static const int PLAYER_VEL = 300;
+    static constexpr int PLAYER_VEL = 300;
 
     Player();
 
