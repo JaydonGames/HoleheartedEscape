@@ -46,7 +46,7 @@ if(DEFINED RUN_EMBED AND BINARY AND SRC AND NAMESPACE AND NAME AND TYPE AND FORM
 
     string(COMPARE EQUAL "${FORMAT}" "LENGTH" WITH_LENGTH)
     if (WITH_LENGTH)
-        file(WRITE ${SRC} "namespace ${NAMESPACE} {\n\tstruct T {\n\t\tconst unsigned long long length = ${BYTES};\n\t\t${TYPE} data[${ARRSIZE}]{${BINARY}, 0x0};\n\t};\n\textern T ${NAME};\n\tT ${NAME};\n}")
+        file(WRITE ${SRC} "namespace ${NAMESPACE} {\n\tstruct asset_t {\n\t\tconst unsigned long long length = ${BYTES};\n\t\t${TYPE} data[${ARRSIZE}]{${BINARY}, 0x0};\n\t};\n\textern asset_t ${NAME};\n\tasset_t ${NAME};\n}")
     else()
         file(WRITE ${SRC} "namespace ${NAMESPACE} {\n\textern ${TYPE} ${NAME}[]{${BINARY}, 0x0};\n}")
     endif()

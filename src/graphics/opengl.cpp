@@ -60,7 +60,7 @@ Texture::Texture(const uint8_t data[], size_t length) {
   this->load(data, length);
 }
 
-Texture::Texture(const Textures::texture_t &texture)
+Texture::Texture(const Textures::asset_t &texture)
     : Texture(texture.data, texture.length) {}
 
 Texture::Texture(Texture &&other) {

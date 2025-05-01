@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.11)
 project("HoleheartedEscape")
 
+if (WIN32)
+    set(GLEW_USE_STATIC_LIBS true)
+    add_compile_definitions(GLEW_STATIC)
+endif()
+
 add_compile_definitions(SDL_MAIN_HANDLED)
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)

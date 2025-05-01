@@ -149,7 +149,7 @@ OpenGL::Texture& Map::get_texture(size_t id) {
 }
 
 size_t Map::get_texture(const std::string name) {
-    return Map::texture_names[std::filesystem::path{name}.stem()];
+    return Map::texture_names[std::filesystem::path{name}.stem().string()];
 }
 
 std::vector<Tile::Data>& Map::get_tileset(size_t id) {
@@ -157,6 +157,6 @@ std::vector<Tile::Data>& Map::get_tileset(size_t id) {
 }
 
 size_t Map::get_tileset(const std::string name) {
-    return Map::tileset_names[std::filesystem::path{name}.stem()];
+    return Map::tileset_names[std::filesystem::path{name}.stem().string()];
 }
 }  // namespace Tiled

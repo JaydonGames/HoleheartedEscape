@@ -1,30 +1,30 @@
 #pragma once
 namespace Shaders {
-typedef const char shader_t[];
+typedef const char asset_t[];
 
-extern shader_t batch_render_vert;
-extern shader_t batch_render_frag;
+extern asset_t batch_render_vert;
+extern asset_t batch_render_frag;
 }  // namespace Shaders
 
 namespace Textures {
-struct texture_t {
+struct asset_t {
     unsigned long long length;
     unsigned char data[];
 };
 
-extern texture_t main_tileset;
-extern texture_t background;
-extern texture_t Crystal;
+extern asset_t main_tileset;
+extern asset_t background;
+extern asset_t Crystal;
 }  // namespace Textures
 
 namespace Maps {
-typedef const char map_t[];
+typedef const char asset_t[];
 
-extern map_t test_map;
+extern asset_t test_map;
 }  // namespace Maps
 
 namespace Tilesets {
-typedef const char tileset_t[];
+typedef const char asset_t[];
 
-extern tileset_t main_tileset;
+extern asset_t main_tileset;
 }  // namespace Tilesets

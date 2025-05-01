@@ -6,6 +6,7 @@
 #include "tiled/map.hpp"
 #include "assets.hpp"
 #include "game/player.hpp"
+#include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
 constexpr int SCREEN_HEIGHT = 1080;
@@ -54,6 +55,7 @@ int main() {
             dt = 0;
         }
         LAST = CURR;
+        std::cout << 1 / dt << '\n';
 
         // Events
         SDL_Event e;

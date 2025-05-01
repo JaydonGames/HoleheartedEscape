@@ -6,7 +6,7 @@
 struct SDL_Window;
 
 namespace Textures {
-    struct texture_t;
+    struct asset_t;
 }
 
 namespace OpenGL {
@@ -49,7 +49,7 @@ namespace OpenGL {
     public:
         Texture();
         Texture(const uint8_t data[], size_t length);
-        Texture(const Textures::texture_t& texture);
+        Texture(const Textures::asset_t& texture);
         Texture(const Texture&) = delete;
         Texture(Texture&&);
         ~Texture();

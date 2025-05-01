@@ -28,7 +28,7 @@ namespace Tiled {
         unsigned int get_flags();
 
     private:
-        friend struct Map;
+        friend class Map;
         struct Data {
             Render::Rect coords;
             size_t texture;
