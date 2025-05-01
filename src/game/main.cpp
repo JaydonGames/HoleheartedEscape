@@ -69,17 +69,27 @@ int main() {
         player.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
-        for (auto &layer : test_map.layers) {
-            for (int y = 0; y < layer.tiles.size(); ++y) {
-                for (int x = 0; x < layer.tiles[y].size(); ++x) {
-                    Tiled::Tile &tile = layer.tiles[y][x];
-                    if (tile.empty)
-                        continue;
-                    Render::Rect coords = tile.get_coords();
-                    renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
-                }
+        // for (auto &layer : test_map.layers) {
+        //     for (int y = 0; y < layer.tiles.size(); ++y) {
+        //         for (int x = 0; x < layer.tiles[y].size(); ++x) {
+        //             Tiled::Tile &tile = layer.tiles[y][x];
+        //             if (tile.empty)
+        //                 continue;
+        //             Render::Rect coords = tile.get_coords();
+        //             renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
+        //         }
+        //     }
+        // }
+        for (int y = 0; y < collision_layer.tiles.size(); ++y) {
+            for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
+                Tiled::Tile &tile = collision_layer.tiles[y][x];
+                if (tile.empty)
+                    continue;
+                Render::Rect coords = tile.get_coords();
+                renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
             }
         }
+
         Render::Rect player_rect = player.get_rect();
         renderer.push({player_rect.x, player_rect.y}, {0, 0, 16, 16}, player_tex, 0);
 
