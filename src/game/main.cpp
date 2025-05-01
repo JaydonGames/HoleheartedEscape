@@ -36,7 +36,8 @@ int main() {
     OpenGL::Texture bg{Textures::background};
     OpenGL::Texture player_tex{Textures::Crystal};
 
-    Player player;
+    Tiled::Layer collision_layer = test_map.layers[0];
+    Player player{collision_layer};
 
     Uint64 LAST = 0;
     Uint64 CURR = SDL_GetPerformanceCounter();
@@ -65,7 +66,7 @@ int main() {
         }
 
         // Updating
-        player.move(dt);
+        player.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
         for (auto &layer : test_map.layers) {
