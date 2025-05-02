@@ -6,7 +6,6 @@
 #include "tiled/map.hpp"
 #include "assets.hpp"
 #include "game/player.hpp"
-#include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
 constexpr int SCREEN_HEIGHT = 1080;
@@ -55,7 +54,6 @@ int main() {
             dt = 0;
         }
         LAST = CURR;
-        std::cout << 1 / dt << '\n';
 
         // Events
         SDL_Event e;
@@ -71,24 +69,15 @@ int main() {
         player.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
-        // for (auto &layer : test_map.layers) {
-        //     for (int y = 0; y < layer.tiles.size(); ++y) {
-        //         for (int x = 0; x < layer.tiles[y].size(); ++x) {
-        //             Tiled::Tile &tile = layer.tiles[y][x];
-        //             if (tile.empty)
-        //                 continue;
-        //             Render::Rect coords = tile.get_coords();
-        //             renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
-        //         }
-        //     }
-        // }
-        for (int y = 0; y < collision_layer.tiles.size(); ++y) {
-            for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-                Tiled::Tile &tile = collision_layer.tiles[y][x];
-                if (tile.empty)
-                    continue;
-                Render::Rect coords = tile.get_coords();
-                renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
+        for (auto &layer : test_map.layers) {
+            for (int y = 0; y < layer.tiles.size(); ++y) {
+                for (int x = 0; x < layer.tiles[y].size(); ++x) {
+                    Tiled::Tile &tile = layer.tiles[y][x];
+                    if (tile.empty)
+                        continue;
+                    Render::Rect coords = tile.get_coords();
+                    renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
+                }
             }
         }
 
