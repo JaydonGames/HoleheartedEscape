@@ -15,6 +15,7 @@ struct asset_t {
 extern asset_t main_tileset;
 extern asset_t background;
 extern asset_t Crystal;
+extern asset_t objects;
 }  // namespace Textures
 
 namespace Maps {

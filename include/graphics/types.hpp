@@ -14,6 +14,7 @@ namespace Render {
     };
 
     struct Rect {
-        int x, y, w, h;
+        float x, y;
+        int w, h;
     };
 }
