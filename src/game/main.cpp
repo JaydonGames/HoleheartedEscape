@@ -7,6 +7,8 @@
 #include "assets.hpp"
 #include "game/player.hpp"
 #include "game/object.hpp"
+#include "physics/physicsworld.hpp"
+#include "physics/square.hpp"
 #include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
@@ -39,9 +41,21 @@ int main() {
     OpenGL::Texture player_tex{Textures::Crystal};
     OpenGL::Texture object_tex{Textures::objects};
 
+    PhysicsWorld engine;
+    // Player player{Render::Vector2D(64, 224)};
+    Square player{Render::Vector2D(64, 208), 16.0f};
+    engine.add_square(player);
     Tiled::Layer collision_layer = test_map.layers[0];
+    // for (int y = 0; y < collision_layer.tiles.size(); ++y) {
+    //     for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
+    //         Tiled::Tile &tile = collision_layer.tiles[y][x];
+    //         if (tile.empty)
+    //             continue;
+    //         Square collision_tile{Render::Vector2D(x * 16, y * 16), false, true};
+    //         engine.add_square(collision_tile);
+    //     }
+    // }
     ObjectTest collision_object{80, 224, collision_layer};
-    Player player{collision_layer, collision_object};
 
     Uint64 LAST = 0;
     Uint64 CURR = SDL_GetPerformanceCounter();
@@ -54,7 +68,7 @@ int main() {
         // Delta time
         CURR = SDL_GetPerformanceCounter();
         dt = ((CURR - LAST) / (double)SDL_GetPerformanceFrequency());
-        if (std::isnan(dt)) {
+        if (dt > 100) {
             dt = 0;
         }
         LAST = CURR;
@@ -66,12 +80,11 @@ int main() {
                 running = false;
                 break;
             }
-            player.input(e);
+            // player.input(e);
         }
 
         // Updating
-        // collision_object.update(dt);
-        player.update(dt);
+        engine.update(dt);
         collision_object.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
@@ -87,11 +100,11 @@ int main() {
             }
         }
 
-        Render::Rect player_rect = player.get_rect();
-        renderer.push({player_rect.x, player_rect.y}, {0, 0, 16, 16}, player_tex, 0);
+        Render::Vector2D player_curr_position = player.get_curr_position();
+        renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
+        // std::cout << player.curr_position.y << '\n';
 
         Render::Rect test_object_rect = collision_object.get_rect();
-        std::cout << test_object_rect.x << '\n';
         renderer.push({test_object_rect.x, test_object_rect.y}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
