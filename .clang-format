@@ -5,7 +5,7 @@ TabWidth: 4
 UseTab: Never
 AccessModifierOffset: -4
 ColumnLimit: 120
-# IndentAccessModifiers: true
+IndentAccessModifiers: true
 SortIncludes: false
 
 # Brace settings
@@ -25,17 +25,18 @@ BraceWrapping:
   SplitEmptyRecord: false
 
 # Function and parameter settings
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: Empty
 AlignAfterOpenBracket: Align
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
+# SpaceAfterOperatorKeyword: true
 
 # Template settings
 SpaceAfterTemplateKeyword: false
 AlwaysBreakTemplateDeclarations: Yes
 
 # Namespace settings
-NamespaceIndentation: None
+NamespaceIndentation: All
 
 # Constructor initializer settings
 BreakConstructorInitializers: BeforeColon

@@ -1,5 +1,5 @@
 include(../embed.cmake)
-add_library(Assets STATIC)
+add_library(Assets STATIC ../include/assets.hpp)
 
 file(GLOB SHADERS */*.vert */*.frag)
 foreach(SHADER ${SHADERS})
