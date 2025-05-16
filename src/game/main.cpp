@@ -45,7 +45,7 @@ int main() {
     // Player player{Render::Vector2D(64, 224)};
     Square player{Render::Vector2D(64, 208), 16.0f};
     engine.add_square(player);
-    Tiled::Layer collision_layer = test_map.layers[0];
+    Tiled::Layer collision_layer = test_map.layers[1];
     // for (int y = 0; y < collision_layer.tiles.size(); ++y) {
     //     for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
     //         Tiled::Tile &tile = collision_layer.tiles[y][x];
