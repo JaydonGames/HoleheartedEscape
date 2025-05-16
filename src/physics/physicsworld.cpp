@@ -2,10 +2,12 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <stdexcept>
 #include <vector>
 #include "graphics/types.hpp"
 #include "physics/square.hpp"
 #include "physics/physicsworld.hpp"
+#include <SDL2/SDL_audio.h>
 #include <iostream>
 
 PhysicsWorld::PhysicsWorld() {
@@ -61,17 +63,60 @@ void PhysicsWorld::satisfy_constraints() {
     }
 }
 
-// void PhysicsWorld::solve_collisions() {
-//     for (int i = 0; i < m_squares.size(); ++i) {
-//         Square* square_1 = m_squares[i];
-//         std::cout << square_1->.y << '\n';
-//         for (int j = i + 1; j < m_squares.size(); ++j) {
-//             Square* square_2 = m_squares[j];
-//             float x_overlap = 16 - abs(square_1->curr_position.x - square_2->curr_position.x);
-//             float y_overlap = 16 - abs(square_1->curr_position.y - square_2->curr_position.y);
-//             if (x_overlap > 0 && y_overlap > 0) {
-//                 R
-//             }
-//         }
-//     }
-// }
+void PhysicsWorld::solve_collisions() {
+    for (int j = 0; j < m_squares.size(); ++j) {
+        Square* square_1 = m_squares[j];
+        std::array<Render::Vector2D, 2> axes_1 = square_1->get_axes();
+        for (int i = (j + 1); i < m_squares.size(); ++i) {
+            bool is_collide = true;
+            Square* square_2 = m_squares[i];
+            std::array<Render::Vector2D, 2> axes_2 = square_2->get_axes();
+
+            double overlap = 9999999;
+            Render::Vector2D min_axis;
+
+            for (Render::Vector2D axis : axes_1) {
+                Projection p1 = square_1->project(axis);
+                Projection p2 = square_2->project(axis);
+
+                // Do the projections overlap?
+                if (!p1.is_overlap(p2)) {
+                    // Then we can guarentee the shapes do not overlap due to SAT theorem
+                    // Continue to check collision for next shape
+                    is_collide = false;
+                    break;
+                } else {
+                    double o = p1.get_overlap(p2);
+                    if (o < overlap) {
+                        overlap = o;
+                        min_axis = axis;
+                    }
+                }
+            }
+            // Continue to check collision for next shape
+            if (!is_collide)
+                continue;
+
+            for (Render::Vector2D axis : axes_2) {
+                Projection p1 = square_1->project(axis);
+                Projection p2 = square_2->project(axis);
+
+                // Do the projections overlap?
+                if (!p1.is_overlap(p2)) {
+                    // Then we can guarentee the shapes do not overlap due to SAT theorem
+                    // Continue to check collision for next shape
+                    is_collide = false;
+                    break;
+                } else {
+                    double o = p1.get_overlap(p2);
+                    if (o < overlap) {
+                        overlap = o;
+                        min_axis = axis;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void PhysicsWorld::resolve_collision() {}

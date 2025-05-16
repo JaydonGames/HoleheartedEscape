@@ -74,6 +74,7 @@ std::array<Render::Vector2D, 2> Square::get_axes() {
 
         axes[i] = normal;
     }
+    return axes;
 }
 
 Projection Square::project(Render::Vector2D axis) {
