@@ -129,8 +129,21 @@ namespace OpenGL {
         glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     }
 
-    void Buffer::allocate(Type type, size_t size){
+    void Buffer::allocate(Type type, size_t size) {
         Buffer::store(type, nullptr, size, true);
+    }
+
+    void Buffer::sync(Type type) {
+        unsigned int bit;
+        switch (type) {
+            case shader:
+                bit = GL_SHADER_STORAGE_BARRIER_BIT;
+            default:
+                assert(type == shader);
+                return;
+        }
+
+        glMemoryBarrier(bit);
     }
 
     void *Buffer::map(Type type, bool writeable) {
@@ -299,12 +312,12 @@ namespace OpenGL {
         this->id = glCreateShader(type);
         glShaderSource(this->id, 1, &shader, nullptr);
         glCompileShader(id);
-        int status;
-        glGetShaderiv(this->id, GL_COMPILE_STATUS, &status);
-        if (!status) {
-            this->id = 0;
+        int success;
+        glGetShaderiv(this->id, GL_COMPILE_STATUS, &success);
+        if (!success) {
             char log[512];
-            glGetShaderInfoLog(id, 512, NULL, log);
+            glGetShaderInfoLog(this->id, 512, NULL, log);
+            this->id = 0;
             throw InitError{log};
         }
     }
@@ -341,5 +354,9 @@ namespace OpenGL {
 
     void Program::bind_uniform_buffer(const char *name, unsigned int binding) {
         glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name), binding);
+    }
+
+    void Program::compute(unsigned int x, unsigned int y, unsigned int z) {
+        glDispatchCompute(x, y, z);
     }
 }

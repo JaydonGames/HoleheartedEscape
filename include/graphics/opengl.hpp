@@ -122,6 +122,7 @@ namespace OpenGL {
 
         static void store(Type type, const void* arr, size_t size, bool dynamic = true);
         static void allocate(Type type, size_t size);
+        static void sync(Type type);
         static void* map(Type type, bool writeable = true);
         static void unmap(Type type);
     };
@@ -210,6 +211,7 @@ namespace OpenGL {
         void bind();
         Uniform get_uniform(const char* name);
         void bind_uniform_buffer(const char* name, unsigned int binding);
+        void compute(unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
     };
 
 }
