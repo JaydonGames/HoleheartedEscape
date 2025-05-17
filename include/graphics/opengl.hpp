@@ -121,6 +121,9 @@ namespace OpenGL {
         void bind(Type type, unsigned int index);
 
         static void store(Type type, const void* arr, size_t size, bool dynamic = true);
+        static void allocate(Type type, size_t size);
+        static void* map(Type type, bool writeable = true);
+        static void unmap(Type type);
     };
 
     class VertexArray : public Entity<Buffer> {

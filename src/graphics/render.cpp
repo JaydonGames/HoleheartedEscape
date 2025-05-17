@@ -32,7 +32,7 @@ namespace Render {
         unsigned int size = this->renderer.queues[queue].quad_end - quad_begin;
         assert(size <= BatchRenderer::max_quads);
         assert(size*sizeof(Quad) <= 16*(2<<9));
-        this->renderer.ubo.fill(OpenGL::Buffer::Type::uniform, this->renderer.quads.data()+quad_begin, size*sizeof(Quad));
+        this->renderer.ubo.store(OpenGL::Buffer::Type::uniform, this->renderer.quads.data()+quad_begin, size*sizeof(Quad));
         this->renderer.vao.draw_triangles(size*6);
     }
 
@@ -131,8 +131,8 @@ namespace Render {
             };
         }
 
-        OpenGL::Buffer::fill(OpenGL::Buffer::vertex, quads.get(), sizeof(QuadVerts) * quad_count);
-        OpenGL::Buffer::fill(OpenGL::Buffer::index, &indices.get()[0][0], sizeof(QuadIndices) * quad_count);
+        OpenGL::Buffer::store(OpenGL::Buffer::vertex, quads.get(), sizeof(QuadVerts) * quad_count);
+        OpenGL::Buffer::store(OpenGL::Buffer::index, &indices.get()[0][0], sizeof(QuadIndices) * quad_count);
         this->vao.vert_attr<unsigned int[2]>(0);
     }
 

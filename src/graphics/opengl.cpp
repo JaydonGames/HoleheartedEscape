@@ -125,8 +125,20 @@ namespace OpenGL {
         glBindBufferBase(type, index, this->id);
     }
 
-    void Buffer::fill(Type type, const void *arr, size_t size, bool dynamic) {
+    void Buffer::store(Type type, const void *arr, size_t size, bool dynamic) {
         glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    }
+
+    void Buffer::allocate(Type type, size_t size){
+        Buffer::store(type, nullptr, size, true);
+    }
+
+    void *Buffer::map(Type type, bool writeable) {
+        return glMapBuffer(type, writeable ? GL_READ_WRITE : GL_READ_ONLY);
+    }
+
+    void Buffer::unmap(Type type) {
+        glUnmapBuffer(type);
     }
 
     VertexArray::VertexArray(Buffer &&vbo, Buffer &&ebo)
@@ -143,7 +155,6 @@ namespace OpenGL {
             glDeleteVertexArrays(1, &this->id);
         this->id = 0;
     }
-
 
     void VertexArray::bind() {
         glBindVertexArray(this->id);
@@ -280,11 +291,11 @@ namespace OpenGL {
     template void Uniform::store<3>(const int *arr, size_t count);
     template void Uniform::store<4>(const int *arr, size_t count);
 
-    Shader::Shader(Type type, const char* shader){
+    Shader::Shader(Type type, const char *shader) {
         this->compile(type, shader);
     }
-    
-    void Shader::compile(Type type, const char* shader){
+
+    void Shader::compile(Type type, const char *shader) {
         this->id = glCreateShader(type);
         glShaderSource(this->id, 1, &shader, nullptr);
         glCompileShader(id);
@@ -298,25 +309,25 @@ namespace OpenGL {
         }
     }
 
-    void Shader::destroy(){
+    void Shader::destroy() {
         if (this->id)
             glDeleteShader(this->id);
         this->id = 0;
     }
 
-    void Program::attach(const Shader& shader) {
+    void Program::attach(const Shader &shader) {
         if (!this->id)
             this->id = glCreateProgram();
         glAttachShader(this->id, shader.id);
     }
 
-    void Program::destroy(){
+    void Program::destroy() {
         if (this->id)
             glDeleteProgram(this->id);
         this->id = 0;
     }
 
-    void Program::link(){
+    void Program::link() {
         glLinkProgram(this->id);
     }
 
