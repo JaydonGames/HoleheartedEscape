@@ -38,14 +38,15 @@ namespace Render {
 
 
 
-    std::string get_shader(bool frag){
+    OpenGL::Shader get_shader(bool frag){
         std::string shader{frag ? Shaders::batch_render_frag : Shaders::batch_render_vert};
-        return shader.replace(shader.find("@"), 1, std::to_string(OpenGL::max_textures()));
+        shader = shader.replace(shader.find("@"), 1, std::to_string(OpenGL::max_textures()));
+        return OpenGL::Shader{frag ? OpenGL::Shader::frag : OpenGL::Shader::vert, shader.c_str()};
     }
 
     BatchRenderer::BatchRenderer() 
         : max_textures(OpenGL::max_textures()),
-          program(get_shader(0).c_str(), get_shader(1).c_str()), 
+          program{get_shader(0), get_shader(1)},
           screen_size(program.get_uniform("screen")), 
           tex_sizes(program.get_uniform("tex_wh")) {
         program.bind();
