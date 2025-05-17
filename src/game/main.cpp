@@ -17,6 +17,27 @@ constexpr int SCREEN_HEIGHT = 1080;
 constexpr int SCREEN_FPS = 60;
 constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
+void compute_shader_test() {
+    OpenGL::Program program{};
+    OpenGL::Shader shader{OpenGL::Shader::Type::comp, Shaders::testing_comp};
+    program.attach(shader);
+    program.link();
+    program.bind();
+
+    OpenGL::Buffer buffer;
+    buffer.bind(OpenGL::Buffer::shader);
+    buffer.bind(OpenGL::Buffer::shader, 0);
+    buffer.allocate(OpenGL::Buffer::shader, 51*sizeof(unsigned int));
+
+    program.compute(50);
+    buffer.sync(OpenGL::Buffer::shader);
+    unsigned int* out = (unsigned int*)buffer.map(OpenGL::Buffer::shader, false);
+    std::cout << "Size: " << out[0] << '\n';
+    for (size_t i = 0; i < 50; ++i)
+        std::cout << out[i+1] << '\n';
+    std::cout << std::flush;
+}
+
 int main() {
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
@@ -24,6 +45,7 @@ int main() {
                                           SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     OpenGL::Context context{window};
+    compute_shader_test();
     Render::BatchRenderer renderer;
     Render::Camera camera{renderer};
     context.set_clear_color(.5, .5, .5);

@@ -4,6 +4,7 @@ namespace Shaders {
 
     extern asset_t batch_render_vert;
     extern asset_t batch_render_frag;
+    extern asset_t testing_comp;
 }
 
 namespace Textures {
