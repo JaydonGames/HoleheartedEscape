@@ -63,6 +63,27 @@ namespace OpenGL {
         SDL_GL_SwapWindow(this->window);
     }
 
+    const unsigned int _formats[3][4][6] = {
+        { /* unsigned integral */
+            {GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RGBA8UI, 0, 0},
+            {GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RGBA16UI, 0, 0},
+            {0, 0, 0, 0, 0, 0},
+            {GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RGBA32UI, 0, 0}
+        },
+        { /* signed integral */
+            {GL_R8I, GL_RG8I, GL_RGB8I, GL_RGBA8I, 0, 0},
+            {GL_R16I, GL_RG16I, GL_RGB16I, GL_RGBA16I, GL_DEPTH_COMPONENT16, 0},
+            {0, 0, 0, 0, GL_DEPTH_COMPONENT24, GL_DEPTH24_STENCIL8},
+            {GL_R32I, GL_RG32I, GL_RGB32I, GL_RGBA32I, GL_DEPTH_COMPONENT32, 0}
+        },
+        { /* floating point */
+            {0, 0, 0, 0, 0, 0},
+            {GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F, 0, 0},
+            {0, 0, 0, 0, 0, 0},
+            {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F, GL_DEPTH32F_STENCIL8}
+        }
+    };
+
     Texture::Texture(const uint8_t data[], size_t length) {
         this->load(data, length);
     }
@@ -129,7 +150,7 @@ namespace OpenGL {
         glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     }
 
-    void Buffer::allocate(Type type, size_t size) {
+    void Buffer::alloc(Type type, size_t size) {
         Buffer::store(type, nullptr, size, true);
     }
 
@@ -358,5 +379,55 @@ namespace OpenGL {
 
     void Program::compute(unsigned int x, unsigned int y, unsigned int z) {
         glDispatchCompute(x, y, z);
+    }
+
+    Renderbuffer::Renderbuffer(){
+        this->load();
+    }
+
+    void Renderbuffer::load(){
+        glGenRenderbuffers(1, &this->id);
+    }
+
+    void Renderbuffer::destroy(){
+        if (this->id)
+            glDeleteRenderbuffers(1, &this->id);
+    }
+
+    void Renderbuffer::bind(){
+        glBindRenderbuffer(GL_RENDERBUFFER, this->id);
+    }
+
+    void Renderbuffer::alloc(format_t format, int x, int y){
+        glRenderbufferStorage(GL_RENDERBUFFER, format, x, y);
+    }
+
+    Framebuffer::Framebuffer(){
+        this->load();
+    }
+
+    void Framebuffer::load(){
+        glGenFramebuffers(1, &this->id);
+    }
+
+    void Framebuffer::destroy(){
+        if (this->id)
+            glDeleteFramebuffers(1, &this->id);
+    }
+
+    void Framebuffer::bind(){
+        glBindFramebuffer(GL_FRAMEBUFFER, this->id);
+    }
+
+    void Framebuffer::unbind(){
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void Framebuffer::attach(Attachment attachment, Renderbuffer& buffer){
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, this->id);
+    }
+
+    void Framebuffer::attach(unsigned int attachment, Renderbuffer& buffer){
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, COLOR+attachment, GL_RENDERBUFFER, this->id);
     }
 }

@@ -41,6 +41,18 @@ int main() {
     OpenGL::Texture player_tex{Textures::Crystal};
     OpenGL::Texture object_tex{Textures::objects};
 
+    OpenGL::Framebuffer fbo;
+    fbo.bind();
+    OpenGL::Renderbuffer color, depth_stencil;
+    color.bind();
+    color.alloc(OpenGL::format<unsigned long>(OpenGL::RGB), SCREEN_WIDTH, SCREEN_HEIGHT);
+    fbo.attach(0, color);
+    depth_stencil.bind();
+    depth_stencil.alloc(OpenGL::format<int, 3>(OpenGL::DEPTH_STENCIL), SCREEN_WIDTH, SCREEN_HEIGHT);
+    fbo.attach(OpenGL::Framebuffer::DEPTH_STENCIL, depth_stencil);
+    fbo.unbind();
+
+
     PhysicsWorld engine;
     // Player player{Render::Vector2D(64, 224)};
     Square player{Render::Vector2D(64, 208), 16.0f};

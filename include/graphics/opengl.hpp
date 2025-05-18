@@ -52,7 +52,7 @@ namespace OpenGL {
         }
 
         bool operator!() {
-            return !id;
+            return !static_cast<T*>(this)->operator bool();
         }
 
     protected:
@@ -80,6 +80,14 @@ namespace OpenGL {
         void* context;
         SDL_Window* window;
     };
+
+    typedef unsigned int format_t;
+    enum Components { R, RG, RGB, RGBA, DEPTH, DEPTH_STENCIL };
+    extern const unsigned int _formats[3][4][6];
+    template<typename T, size_t size = sizeof(T)>
+    format_t format(Components comp) {
+        return _formats[std::is_signed_v<T> + std::is_floating_point_v<T>][size - 1][comp];
+    }
 
     class Texture : public Entity<Texture> {
     public:
@@ -121,7 +129,7 @@ namespace OpenGL {
         void bind(Type type, unsigned int index);
 
         static void store(Type type, const void* arr, size_t size, bool dynamic = true);
-        static void allocate(Type type, size_t size);
+        static void alloc(Type type, size_t size);
         static void sync(Type type);
         static void* map(Type type, bool writeable = true);
         static void unmap(Type type);
@@ -212,6 +220,34 @@ namespace OpenGL {
         Uniform get_uniform(const char* name);
         void bind_uniform_buffer(const char* name, unsigned int binding);
         void compute(unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
+    };
+
+    class Renderbuffer : public Entity<Renderbuffer> {
+    public:
+        Renderbuffer();
+        void load();
+        void destroy();
+        void bind();
+        void alloc(format_t format, int x, int y);
+    };
+
+    class Framebuffer : public Entity<Framebuffer> {
+    public:
+        enum Attachment {
+            COLOR = 0x8CE0,
+            DEPTH = 0x8D00,
+            STENCIL = 0x8D20,
+            DEPTH_STENCIL = 0x821A,
+        };
+
+        Framebuffer();
+        void load();
+        void destroy();
+        void bind();
+        void unbind();
+
+        void attach(Attachment attachment, Renderbuffer& buffer);
+        void attach(unsigned int color_attachment, Renderbuffer& buffer);
     };
 
 }
