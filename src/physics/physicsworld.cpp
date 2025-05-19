@@ -53,24 +53,34 @@ void PhysicsWorld::update_positions(double dt) {
     }
 }
 
-// FIX: I don't think this does anything to actually pos of particles
 void PhysicsWorld::satisfy_constraints() {
     for (Square& square : m_squares) {
-        if (!square.is_static) {
-            std::array<Constraint*, 4> constraints = square.get_constraints();
-            std::array<VerletParticle*, 4> particles = square.get_particles();
-            for (int j = 0; j < 5; ++j) {
-                for (int i = 0; i < 4; ++i) {
-                    Constraint* c = constraints[i];
-                    // std::cout << c->particle_a << '\n';
-                    Render::Vector2D particle_1 = particles[c->particle_a]->curr_position;
-                    Render::Vector2D particle_2 = particles[c->particle_b]->curr_position;
+        if (square.is_static)
+            continue;
 
-                    Render::Vector2D delta = particle_2 - particle_1;
-                    float delta_length = std::sqrt(delta.dot_product(delta));
-                    float diff = (delta_length - c->rest_length) / delta_length;
-                    particle_1 = particle_1 - delta * .5 * diff;
-                    particle_2 = particle_2 + delta * .5 * diff;
+        std::array<Constraint*, 4> constraints = square.get_constraints();
+        std::array<VerletParticle*, 4> particles = square.get_particles();
+
+        for (int j = 0; j < 10; ++j) {
+            for (int i = 0; i < 4; ++i) {
+                Constraint* c = constraints[i];
+                VerletParticle* p1 = particles[c->particle_a];
+                VerletParticle* p2 = particles[c->particle_b];
+
+                if (p1->is_static && p2->is_static)
+                    continue;
+
+                Render::Vector2D delta = p2->curr_position - p1->curr_position;
+                float delta_length = std::sqrt(delta.dot_product(delta));
+                float diff = (delta_length - c->rest_length) / delta_length;
+
+                if (p1->is_static) {
+                    p2->curr_position = p2->curr_position - delta * diff;
+                } else if (p2->is_static) {
+                    p1->curr_position = p1->curr_position + delta * diff;
+                } else {
+                    p1->curr_position = p1->curr_position + delta * diff * 0.5f;
+                    p2->curr_position = p2->curr_position - delta * diff * 0.5f;
                 }
             }
         }

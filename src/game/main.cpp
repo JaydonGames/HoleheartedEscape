@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <SDL_events.h>
+#include <SDL_keycode.h>
 #include <SDL_video.h>
 #include "graphics/opengl.hpp"
 #include "graphics/render.hpp"
@@ -80,7 +81,32 @@ int main() {
                 running = false;
                 break;
             }
-            // player.input(e);
+            if (e.type == SDL_KEYDOWN) {
+                switch (e.key.keysym.sym) {
+                    case SDLK_UP: {
+                        std::cout << "test\n";
+                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
+                        for (VerletParticle *p : particles) {
+                            p->accelerate(Render::Vector2D(0, -1000.0f));
+                        }
+                        break;
+                    }
+                    case SDLK_RIGHT: {
+                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
+                        for (VerletParticle *p : particles) {
+                            p->accelerate(Render::Vector2D(200.0f, 0));
+                        }
+                        break;
+                    }
+                    case SDLK_LEFT: {
+                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
+                        for (VerletParticle *p : particles) {
+                            p->accelerate(Render::Vector2D(-200.0f, 0));
+                        }
+                        break;
+                    }
+                }
+            }
         }
 
         // Updating
@@ -102,6 +128,16 @@ int main() {
 
         Render::Vector2D player_curr_position = engine.get_square(player_index).get_curr_position();
         renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
+        std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
+        std::cout << "0x: " << parts[0]->curr_position.x << '\n';
+        std::cout << "0y: " << parts[0]->curr_position.y << '\n';
+        std::cout << "1x: " << parts[1]->curr_position.x << '\n';
+        std::cout << "1y: " << parts[1]->curr_position.y << '\n';
+        std::cout << "2x: " << parts[2]->curr_position.x << '\n';
+        std::cout << "2y: " << parts[2]->curr_position.y << '\n';
+        std::cout << "3x: " << parts[3]->curr_position.x << '\n';
+        std::cout << "3y: " << parts[3]->curr_position.y << '\n';
+        std::cout << '\n';
 
         Render::Rect test_object_rect = collision_object.get_rect();
         renderer.push({test_object_rect.x, test_object_rect.y}, {0, 0, 16, 16}, object_tex, 0);
