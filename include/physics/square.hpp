@@ -31,15 +31,24 @@ struct Projection {
         bool is_overlap(Projection& other);
 
         double get_overlap(Projection& other);
+
+        bool do_flip_direction(Projection& other);
 };
 
 class Square {
     public:
         bool is_static;
+        float side_length;
 
         Square(Render::Vector2D pos, float side_length = 16.0f, bool is_static = false);
 
+        Square(Square&& other) noexcept;
+
+        Square& operator=(Square&& other) noexcept;
+
         Render::Vector2D get_curr_position();
+
+        Render::Vector2D get_center_position();
 
         std::array<VerletParticle*, 4> get_particles();
 
@@ -54,5 +63,4 @@ class Square {
     private:
         std::array<std::unique_ptr<VerletParticle>, 4> m_vertices;
         std::array<std::unique_ptr<Constraint>, 4> m_constraints;
-        std::array<Render::Vector2D, 2> m_axes;
 };

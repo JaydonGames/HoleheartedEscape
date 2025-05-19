@@ -9,6 +9,7 @@
 #include "game/object.hpp"
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
+#include <array>
 #include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
@@ -42,19 +43,18 @@ int main() {
     OpenGL::Texture object_tex{Textures::objects};
 
     PhysicsWorld engine;
-    // Player player{Render::Vector2D(64, 224)};
-    Square player{Render::Vector2D(64, 208), 16.0f};
-    engine.add_square(player);
-    Tiled::Layer collision_layer = test_map.layers[1];
-    // for (int y = 0; y < collision_layer.tiles.size(); ++y) {
-    //     for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-    //         Tiled::Tile &tile = collision_layer.tiles[y][x];
-    //         if (tile.empty)
-    //             continue;
-    //         Square collision_tile{Render::Vector2D(x * 16, y * 16), false, true};
-    //         engine.add_square(collision_tile);
-    //     }
-    // }
+    Square player{Render::Vector2D(64, 160), 16.0f};
+    int player_index = engine.add_square(std::move(player));
+    Tiled::Layer collision_layer = test_map.layers[0];
+    for (int y = 0; y < collision_layer.tiles.size(); ++y) {
+        for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
+            Tiled::Tile &tile = collision_layer.tiles[y][x];
+            if (tile.empty)
+                continue;
+            Square collision_tile{Render::Vector2D(x * 16, y * 16), 16.0f, true};
+            engine.add_square(std::move(collision_tile));
+        }
+    }
     ObjectTest collision_object{80, 224, collision_layer};
 
     Uint64 LAST = 0;
@@ -100,9 +100,8 @@ int main() {
             }
         }
 
-        Render::Vector2D player_curr_position = player.get_curr_position();
+        Render::Vector2D player_curr_position = engine.get_square(player_index).get_curr_position();
         renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
-        // std::cout << player.curr_position.y << '\n';
 
         Render::Rect test_object_rect = collision_object.get_rect();
         renderer.push({test_object_rect.x, test_object_rect.y}, {0, 0, 16, 16}, object_tex, 0);
