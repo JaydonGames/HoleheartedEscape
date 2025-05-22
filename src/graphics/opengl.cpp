@@ -63,26 +63,55 @@ namespace OpenGL {
         SDL_GL_SwapWindow(this->window);
     }
 
-    const unsigned int _formats[3][4][6] = {
-        { /* unsigned integral */
-            {GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RGBA8UI, 0, 0},
-            {GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RGBA16UI, 0, 0},
-            {0, 0, 0, 0, 0, 0},
-            {GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RGBA32UI, 0, 0}
-        },
-        { /* signed integral */
-            {GL_R8I, GL_RG8I, GL_RGB8I, GL_RGBA8I, 0, 0},
-            {GL_R16I, GL_RG16I, GL_RGB16I, GL_RGBA16I, GL_DEPTH_COMPONENT16, 0},
-            {0, 0, 0, 0, GL_DEPTH_COMPONENT24, GL_DEPTH24_STENCIL8},
-            {GL_R32I, GL_RG32I, GL_RGB32I, GL_RGBA32I, GL_DEPTH_COMPONENT32, 0}
-        },
-        { /* floating point */
-            {0, 0, 0, 0, 0, 0},
-            {GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F, 0, 0},
-            {0, 0, 0, 0, 0, 0},
-            {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F, GL_DEPTH32F_STENCIL8}
+    unsigned int Format::to_opengl() const {
+        constexpr unsigned int typed_fmt[3][4][6] = {
+            {/* unsigned integral */
+             {GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RGBA8UI, 0, 0},
+             {GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RGBA16UI, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RGBA32UI, 0, 0}},
+            {/* signed integral */
+             {GL_R8I, GL_RG8I, GL_RGB8I, GL_RGBA8I, 0, 0},
+             {GL_R16I, GL_RG16I, GL_RGB16I, GL_RGBA16I, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32I, GL_RG32I, GL_RGB32I, GL_RGBA32I, 0, 0}},
+            {/* floating point */
+             {0, 0, 0, 0, 0, 0},
+             {GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F, GL_DEPTH32F_STENCIL8}}};
+
+        constexpr unsigned int norm_fmt[8][6] = {
+            {0, 0, 0, GL_RGBA2, 0, 0}, {0, 0, GL_RGB4, GL_RGBA4, 0, 0},
+            {0, 0, GL_RGB5, 0, 0, 0},  {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, 0, 0},
+            {0, 0, GL_RGB10, 0, 0, 0}, {0, 0, GL_RGB12, GL_RGBA12, 0, 0},
+            {0, 0, 0, 0, 0, 0},        {GL_R16, GL_RG16, GL_RGB16, GL_RGBA16, GL_DEPTH_COMPONENT16, 0},
+        };
+
+        constexpr unsigned int norm_signed_fmt[2][6] = {
+            {GL_R8_SNORM, GL_RG8_SNORM, GL_RGB8_SNORM, GL_RGBA8_SNORM, 0, 0},
+            {GL_R16_SNORM, GL_RG16_SNORM, GL_RGB16_SNORM, GL_RGBA16_SNORM, 0, 0},
+        };
+
+        unsigned int format;
+        if (type == Typed)
+            format = typed_fmt[typed.is_signed + typed.is_floating_point][typed.size - 1][typed.component];
+        if (type == Normalized) {
+            if (norm.is_signed)
+                format = norm_signed_fmt[norm.bits == 16][norm.component];
+            else if (norm.bits == 5)
+                format = norm_fmt[2][norm.component];
+            else if ((norm.bits == 24 || norm.bits == 32) && norm.component == Components::DEPTH)
+                format = norm.bits == 24 ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT32;
+            else if (norm.bits == 24 && norm.component == Components::DEPTH_STENCIL)
+                format = GL_DEPTH24_STENCIL8;
+            else
+                format = norm_fmt[norm.bits / 2 - 1][norm.component];
         }
-    };
+
+        assert(format);
+        return format;
+    }
 
     Texture::Texture(const uint8_t data[], size_t length) {
         this->load(data, length);
@@ -91,7 +120,7 @@ namespace OpenGL {
     Texture::Texture(const Textures::asset_t &texture)
         : Texture(texture.data, texture.length) {}
 
-    Texture::Texture(Texture &&other) {
+    Texture::Texture(Texture &&other) : Entity<Texture>(std::move(other)) {
         this->w = other.w;
         this->h = other.h;
     }
@@ -121,6 +150,19 @@ namespace OpenGL {
         SDL_FreeSurface(loaded_surface);
         SDL_FreeSurface(surface);
         glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
+    void Texture::alloc(Format format, unsigned int width, unsigned int height) {
+        assert(!this->id);
+        glGenTextures(1, &this->id);
+        this->w = width;
+        this->h = height;
+        this->bind();
+        glTexImage2D(GL_TEXTURE_2D, 0, format.to_opengl(), width, height, 0, GL_RGBA, GL_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
     void Texture::bind(unsigned int index) {
@@ -381,53 +423,65 @@ namespace OpenGL {
         glDispatchCompute(x, y, z);
     }
 
-    Renderbuffer::Renderbuffer(){
+    Renderbuffer::Renderbuffer() {
         this->load();
     }
 
-    void Renderbuffer::load(){
+    void Renderbuffer::load() {
         glGenRenderbuffers(1, &this->id);
     }
 
-    void Renderbuffer::destroy(){
+    void Renderbuffer::destroy() {
         if (this->id)
             glDeleteRenderbuffers(1, &this->id);
     }
 
-    void Renderbuffer::bind(){
+    void Renderbuffer::bind() {
         glBindRenderbuffer(GL_RENDERBUFFER, this->id);
     }
 
-    void Renderbuffer::alloc(format_t format, int x, int y){
-        glRenderbufferStorage(GL_RENDERBUFFER, format, x, y);
+    void Renderbuffer::alloc(const Format &format, int x, int y) {
+        glRenderbufferStorage(GL_RENDERBUFFER, format.to_opengl(), x, y);
     }
 
-    Framebuffer::Framebuffer(){
+    Framebuffer::Framebuffer() {
         this->load();
     }
 
-    void Framebuffer::load(){
+    void Framebuffer::load() {
         glGenFramebuffers(1, &this->id);
     }
 
-    void Framebuffer::destroy(){
+    void Framebuffer::destroy() {
         if (this->id)
             glDeleteFramebuffers(1, &this->id);
     }
 
-    void Framebuffer::bind(){
+    void Framebuffer::bind() {
         glBindFramebuffer(GL_FRAMEBUFFER, this->id);
     }
 
-    void Framebuffer::unbind(){
+    void Framebuffer::unbind() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
-    void Framebuffer::attach(Attachment attachment, Renderbuffer& buffer){
+    void Framebuffer::attach(Attachment attachment, Renderbuffer &buffer) {
+        buffer.bind();
         glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, this->id);
     }
 
-    void Framebuffer::attach(unsigned int attachment, Renderbuffer& buffer){
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, COLOR+attachment, GL_RENDERBUFFER, this->id);
+    void Framebuffer::attach(unsigned int attachment, Renderbuffer &buffer) {
+        buffer.bind();
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, COLOR + attachment, GL_RENDERBUFFER, this->id);
+    }
+
+    void Framebuffer::attach(Attachment attachment, Texture &buffer) {
+        buffer.bind();
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, this->id, 0);
+    }
+
+    void Framebuffer::attach(unsigned int attachment, Texture &buffer) {
+        buffer.bind();
+        glFramebufferTexture2D(GL_FRAMEBUFFER, COLOR + attachment, GL_TEXTURE_2D, this->id, 0);
     }
 }

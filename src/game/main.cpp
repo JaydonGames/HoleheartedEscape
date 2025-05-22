@@ -18,20 +18,26 @@ constexpr int SCREEN_FPS = 60;
 constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 int main() {
+    Render::Vec2 screen{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,
-                                          SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen.x,
+                                          screen.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     OpenGL::Context context{window};
-    Render::BatchRenderer renderer;
+    Render::BatchRenderer renderer, resized_renderer;
     Render::Camera camera{renderer};
     context.set_clear_color(.5, .5, .5);
     context.enable_vsync();
-    constexpr Render::Vec2 canvas{SCREEN_WIDTH / 4, SCREEN_HEIGHT / 4};
-    context.set_canvas_size(SCREEN_WIDTH, SCREEN_HEIGHT);
-    renderer.set_canvas(canvas.x, canvas.y);
-    camera.set(canvas.x / 2, canvas.y / 2);
+    constexpr Render::Vec2 canvas{SCREEN_WIDTH, SCREEN_HEIGHT};
+
+    OpenGL::Framebuffer fbo;
+    OpenGL::Texture color;
+    fbo.bind();
+    color.alloc(OpenGL::format<8>(OpenGL::Format::RGBA), SCREEN_WIDTH, SCREEN_HEIGHT);
+    fbo.attach(0, color);
+    fbo.unbind();
 
     Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
     Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
@@ -40,18 +46,6 @@ int main() {
     OpenGL::Texture bg{Textures::background};
     OpenGL::Texture player_tex{Textures::Crystal};
     OpenGL::Texture object_tex{Textures::objects};
-
-    OpenGL::Framebuffer fbo;
-    fbo.bind();
-    OpenGL::Renderbuffer color, depth_stencil;
-    color.bind();
-    color.alloc(OpenGL::format<unsigned long>(OpenGL::RGB), SCREEN_WIDTH, SCREEN_HEIGHT);
-    fbo.attach(0, color);
-    depth_stencil.bind();
-    depth_stencil.alloc(OpenGL::format<int, 3>(OpenGL::DEPTH_STENCIL), SCREEN_WIDTH, SCREEN_HEIGHT);
-    fbo.attach(OpenGL::Framebuffer::DEPTH_STENCIL, depth_stencil);
-    fbo.unbind();
-
 
     PhysicsWorld engine;
     // Player player{Render::Vector2D(64, 224)};
@@ -92,6 +86,8 @@ int main() {
                 running = false;
                 break;
             }
+            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
+                screen = {e.window.data1, e.window.data2};
             // player.input(e);
         }
 
@@ -120,8 +116,18 @@ int main() {
         renderer.push({test_object_rect.x, test_object_rect.y}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
-        context.clear();
+        renderer.set_canvas(canvas.x, canvas.y);
+        camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
+        renderer.clear(fbo);
+        renderer.render(fbo);
+
+        renderer.set_canvas(screen.x, screen.y);
+        float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
+        camera.set(screen.x / 2, screen.y / 2, zoom);
+        renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
+                      {0, 0, canvas.x, canvas.y}, color, Render::FlipY);
         renderer.render();
+
         context.swap_buffer();
 
         ++frame_count;

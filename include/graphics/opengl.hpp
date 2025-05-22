@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <initializer_list>
 #include <stdexcept>
+#include <type_traits>
 
 struct SDL_Window;
 
@@ -81,12 +82,44 @@ namespace OpenGL {
         SDL_Window* window;
     };
 
-    typedef unsigned int format_t;
-    enum Components { R, RG, RGB, RGBA, DEPTH, DEPTH_STENCIL };
-    extern const unsigned int _formats[3][4][6];
-    template<typename T, size_t size = sizeof(T)>
-    format_t format(Components comp) {
-        return _formats[std::is_signed_v<T> + std::is_floating_point_v<T>][size - 1][comp];
+    struct Format {
+        enum Components { R, RG, RGB, RGBA, DEPTH, DEPTH_STENCIL };
+
+        enum Type {
+            Typed,
+            Normalized,
+        } type;
+
+        union {
+            struct {
+                bool is_signed;
+                bool is_floating_point;
+                size_t size;
+                Components component;
+            } typed;
+            struct {
+                bool is_signed;
+                size_t bits;
+                Components component;
+            } norm;
+        };
+
+        unsigned int to_opengl() const;
+        unsigned int to_sdl() const;
+    };
+
+    template<size_t size, bool is_signed = false>
+    Format format(Format::Components comp) {
+        Format fmt{Format::Normalized};
+        fmt.norm = {is_signed, size, comp};
+        return fmt;
+    }
+
+    template<typename T>
+    Format format(Format::Components comp) {
+        Format fmt{Format::Typed};
+        fmt.typed = {std::is_signed_v<T>, std::is_floating_point_v<T>, sizeof(T), comp};
+        return fmt;
     }
 
     class Texture : public Entity<Texture> {
@@ -97,6 +130,7 @@ namespace OpenGL {
         Texture(Texture&&);
 
         void load(const uint8_t data[], size_t length);
+        void alloc(Format format, unsigned int width, unsigned int height);
         void destroy();
         void bind(unsigned int index = 0);
 
@@ -228,7 +262,7 @@ namespace OpenGL {
         void load();
         void destroy();
         void bind();
-        void alloc(format_t format, int x, int y);
+        void alloc(const Format& format, int x, int y);
     };
 
     class Framebuffer : public Entity<Framebuffer> {
@@ -248,6 +282,9 @@ namespace OpenGL {
 
         void attach(Attachment attachment, Renderbuffer& buffer);
         void attach(unsigned int color_attachment, Renderbuffer& buffer);
+        void attach(Attachment attachment, Texture& buffer);
+        void attach(unsigned int color_attachment, Texture& buffer);
+
     };
 
 }
