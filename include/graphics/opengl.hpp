@@ -1,7 +1,9 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <stdexcept>
+#include <type_traits>
 
 struct SDL_Window;
 
@@ -11,9 +13,8 @@ namespace Textures {
 
 namespace OpenGL {
     typedef unsigned int id_t;
-    
-    int max_textures();
 
+    int max_textures();
 
     class InitError : public std::runtime_error {
     public:
@@ -22,6 +23,43 @@ namespace OpenGL {
         InitError(const unsigned char* what);
     };
 
+    template<typename T>
+    class Entity {
+    public:
+        Entity(const Entity&) = delete;
+        Entity& operator=(const Entity&) = delete;
+
+        Entity(Entity&& entity) {
+            id = entity.release();
+        }
+
+        Entity& operator=(Entity&& entity) {
+            id = entity.release();
+        }
+
+        ~Entity() {
+            if (this->id)
+                static_cast<T*>(this)->destroy();
+        }
+
+        id_t release() {
+            id_t id = this->id;
+            this->id = 0;
+            return id;
+        }
+
+        operator bool() {
+            return id;
+        }
+
+        bool operator!() {
+            return !static_cast<T*>(this)->operator bool();
+        }
+
+    protected:
+        Entity() {}
+        id_t id = 0;
+    };
 
     class Context {
     public:
@@ -44,41 +82,71 @@ namespace OpenGL {
         SDL_Window* window;
     };
 
+    struct Format {
+        enum Components { R, RG, RGB, RGBA, DEPTH, DEPTH_STENCIL };
 
-    class Texture {
+        enum Type {
+            Typed,
+            Normalized,
+        } type;
+
+        union {
+            struct {
+                bool is_signed;
+                bool is_floating_point;
+                size_t size;
+                Components component;
+            } typed;
+            struct {
+                bool is_signed;
+                size_t bits;
+                Components component;
+            } norm;
+        };
+
+        unsigned int to_opengl() const;
+        unsigned int to_sdl() const;
+    };
+
+    template<size_t size, bool is_signed = false>
+    Format format(Format::Components comp) {
+        Format fmt{Format::Normalized};
+        fmt.norm = {is_signed, size, comp};
+        return fmt;
+    }
+
+    template<typename T>
+    Format format(Format::Components comp) {
+        Format fmt{Format::Typed};
+        fmt.typed = {std::is_signed_v<T>, std::is_floating_point_v<T>, sizeof(T), comp};
+        return fmt;
+    }
+
+    class Texture : public Entity<Texture> {
     public:
-        Texture();
+        Texture() {}
         Texture(const uint8_t data[], size_t length);
         Texture(const Textures::asset_t& texture);
-        Texture(const Texture&) = delete;
         Texture(Texture&&);
-        ~Texture();
 
         void load(const uint8_t data[], size_t length);
-        id_t release();
-
+        void alloc(Format format, unsigned int width, unsigned int height);
+        void destroy();
         void bind(unsigned int index = 0);
 
-        inline unsigned int width() const{
+        inline unsigned int width() const {
             return this->w;
         }
 
-        inline unsigned int height() const{
+        inline unsigned int height() const {
             return this->h;
         }
-           
-        operator bool() const;
-        bool operator !() const;
-
-    protected:
-        id_t id;
 
     private:
         int w, h;
     };
 
-
-    class Buffer {
+    class Buffer : public Entity<Buffer> {
     public:
         enum Type : unsigned int {
             /* Values from OpenGL */
@@ -89,30 +157,23 @@ namespace OpenGL {
         };
 
         Buffer();
-        Buffer(const Buffer&) = delete;
-        Buffer(Buffer&&);
-        ~Buffer();
-        id_t release();
 
+        void destroy();
         void bind(Type type);
-        void bind(Type type, unsigned int index); /* Implement with glBindBufferBase */
+        void bind(Type type, unsigned int index);
 
-        static void fill(Type type, const void* arr, size_t size, bool dynamic = true);
-
-    protected:
-        id_t id;
+        static void store(Type type, const void* arr, size_t size, bool dynamic = true);
+        static void alloc(Type type, size_t size);
+        static void sync(Type type);
+        static void* map(Type type, bool writeable = true);
+        static void unmap(Type type);
     };
 
-
-
-    class VertexArray {
+    class VertexArray : public Entity<Buffer> {
     public:
         VertexArray(Buffer&& vbo = Buffer{}, Buffer&& ebo = Buffer{});
-        VertexArray(const VertexArray&) = delete;
-        VertexArray(VertexArray&&);
-        ~VertexArray();
-        id_t release();
 
+        void destroy();
         void bind();
         void draw_triangles(int vertex_count);
 
@@ -120,11 +181,8 @@ namespace OpenGL {
         void vert_attr(unsigned int index, uintptr_t offset = 0, int stride = sizeof(T));
 
     protected:
-        id_t id;
         Buffer vbo, ebo;
     };
-
-
 
     class Uniform {
     public:
@@ -142,38 +200,91 @@ namespace OpenGL {
         void store(int, int, int, int);
 
         template<size_t vec_size>
-        void store(const float *arr, size_t count);
+        void store(const float* arr, size_t count);
         template<size_t vec_size>
-        void store(const unsigned int *arr, size_t count);
+        void store(const unsigned int* arr, size_t count);
         template<size_t vec_size>
-        void store(const int *arr, size_t count);
+        void store(const int* arr, size_t count);
 
     protected:
         int id;
-        Uniform(int id) : id(id){}
+        Uniform(int id)
+            : id(id) {}
         friend class Program;
     };
 
-
-
-    class Program {
+    class Shader : public Entity<Shader> {
     public:
-        Program();
-        Program(const char* vert, const char* frag);
-        Program(const Program&) = delete;
-        Program(Program&&);
-        id_t release();
-        void load(const char* vert, const char* frag);
+        enum Type : unsigned int {
+            vert = 0x8B31,
+            frag = 0x8B30,
+            tcs = 0x8E88,
+            tes = 0x8E87,
+            geo = 0x8DD9,
+            comp = 0x91B9
+        };
 
+        Shader() {}
+        Shader(Type type, const char* shader);
+        void compile(Type type, const char* shader);
+        void destroy();
+        friend class Program;
+    };
+
+    class Program : public Entity<Program> {
+    public:
+        Program() {}
+        void attach(const Shader&);
+        void link();
+
+        Program(std::initializer_list<Shader> shaders) {
+            for (const Shader& shader : shaders)
+                this->attach(shader);
+            this->link();
+        }
+
+        Program(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
+            for (Shader& shader : shaders)
+                this->attach(shader);
+            this->link();
+        }
+
+        void destroy();
         void bind();
         Uniform get_uniform(const char* name);
         void bind_uniform_buffer(const char* name, unsigned int binding);
-
-        operator bool() const;
-        bool operator !() const;
-
-    protected:
-        id_t id;
+        void compute(unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
     };
-}
 
+    class Renderbuffer : public Entity<Renderbuffer> {
+    public:
+        Renderbuffer();
+        void load();
+        void destroy();
+        void bind();
+        void alloc(const Format& format, int x, int y);
+    };
+
+    class Framebuffer : public Entity<Framebuffer> {
+    public:
+        enum Attachment {
+            COLOR = 0x8CE0,
+            DEPTH = 0x8D00,
+            STENCIL = 0x8D20,
+            DEPTH_STENCIL = 0x821A,
+        };
+
+        Framebuffer();
+        void load();
+        void destroy();
+        void bind();
+        void unbind();
+
+        void attach(Attachment attachment, Renderbuffer& buffer);
+        void attach(unsigned int color_attachment, Renderbuffer& buffer);
+        void attach(Attachment attachment, Texture& buffer);
+        void attach(unsigned int color_attachment, Texture& buffer);
+
+    };
+
+}

@@ -5,7 +5,7 @@ TabWidth: 4
 UseTab: Never
 AccessModifierOffset: -4
 ColumnLimit: 120
-IndentAccessModifiers: true
+IndentAccessModifiers: false
 SortIncludes: false
 
 # Brace settings
@@ -37,12 +37,14 @@ AlwaysBreakTemplateDeclarations: Yes
 
 # Namespace settings
 NamespaceIndentation: All
+FixNamespaceComments: false
 
 # Constructor initializer settings
 BreakConstructorInitializers: BeforeColon
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
+PackConstructorInitializers: Never
 
 # Pointer alignment
 PointerAlignment: Left

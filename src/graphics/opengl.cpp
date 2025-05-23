@@ -9,335 +9,479 @@
 
 namespace OpenGL {
 
-int max_textures() {
-  int max;
-  glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max);
-  return max;
+    int max_textures() {
+        int max;
+        glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max);
+        return max;
+    }
+
+    InitError::InitError(const std::string &what)
+        : std::runtime_error(what) {}
+
+    InitError::InitError(const char *what)
+        : std::runtime_error(what) {}
+
+    InitError::InitError(const unsigned char *what)
+        : std::runtime_error(std::string(what, what + strlen(reinterpret_cast<const char *>(what)))) {}
+
+    Context::Context(SDL_Window *window, int major, int minor, bool core)
+        : window(window) {
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
+        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                            core ? SDL_GL_CONTEXT_PROFILE_CORE : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+        this->context = SDL_GL_CreateContext(window);
+        if (!this->context)
+            throw InitError{SDL_GetError()};
+        ::glewExperimental = true;
+        unsigned int err = glewInit();
+        if (err)
+            throw InitError{glewGetErrorString(err)};
+    }
+
+    bool Context::enable_vsync() {
+        return SDL_GL_SetSwapInterval(1) >= 0;
+    }
+
+    void Context::set_canvas_size(int x, int y) {
+        glViewport(0, 0, x, y);
+    }
+
+    void Context::clear() {
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+
+    void Context::set_clear_color(float r, float g, float b, float a) {
+        glClearColor(r, g, b, a);
+    }
+
+    void Context::sync() {
+        glFinish();
+    }
+
+    void Context::swap_buffer() {
+        SDL_GL_SwapWindow(this->window);
+    }
+
+    unsigned int Format::to_opengl() const {
+        constexpr unsigned int typed_fmt[3][4][6] = {
+            {/* unsigned integral */
+             {GL_R8UI, GL_RG8UI, GL_RGB8UI, GL_RGBA8UI, 0, 0},
+             {GL_R16UI, GL_RG16UI, GL_RGB16UI, GL_RGBA16UI, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32UI, GL_RG32UI, GL_RGB32UI, GL_RGBA32UI, 0, 0}},
+            {/* signed integral */
+             {GL_R8I, GL_RG8I, GL_RGB8I, GL_RGBA8I, 0, 0},
+             {GL_R16I, GL_RG16I, GL_RGB16I, GL_RGBA16I, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32I, GL_RG32I, GL_RGB32I, GL_RGBA32I, 0, 0}},
+            {/* floating point */
+             {0, 0, 0, 0, 0, 0},
+             {GL_R16F, GL_RG16F, GL_RGB16F, GL_RGBA16F, 0, 0},
+             {0, 0, 0, 0, 0, 0},
+             {GL_R32F, GL_RG32F, GL_RGB32F, GL_RGBA32F, GL_DEPTH_COMPONENT32F, GL_DEPTH32F_STENCIL8}}};
+
+        constexpr unsigned int norm_fmt[8][6] = {
+            {0, 0, 0, GL_RGBA2, 0, 0}, {0, 0, GL_RGB4, GL_RGBA4, 0, 0},
+            {0, 0, GL_RGB5, 0, 0, 0},  {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8, 0, 0},
+            {0, 0, GL_RGB10, 0, 0, 0}, {0, 0, GL_RGB12, GL_RGBA12, 0, 0},
+            {0, 0, 0, 0, 0, 0},        {GL_R16, GL_RG16, GL_RGB16, GL_RGBA16, GL_DEPTH_COMPONENT16, 0},
+        };
+
+        constexpr unsigned int norm_signed_fmt[2][6] = {
+            {GL_R8_SNORM, GL_RG8_SNORM, GL_RGB8_SNORM, GL_RGBA8_SNORM, 0, 0},
+            {GL_R16_SNORM, GL_RG16_SNORM, GL_RGB16_SNORM, GL_RGBA16_SNORM, 0, 0},
+        };
+
+        unsigned int format;
+        if (type == Typed)
+            format = typed_fmt[typed.is_signed + typed.is_floating_point][typed.size - 1][typed.component];
+        if (type == Normalized) {
+            if (norm.is_signed)
+                format = norm_signed_fmt[norm.bits == 16][norm.component];
+            else if (norm.bits == 5)
+                format = norm_fmt[2][norm.component];
+            else if ((norm.bits == 24 || norm.bits == 32) && norm.component == Components::DEPTH)
+                format = norm.bits == 24 ? GL_DEPTH_COMPONENT24 : GL_DEPTH_COMPONENT32;
+            else if (norm.bits == 24 && norm.component == Components::DEPTH_STENCIL)
+                format = GL_DEPTH24_STENCIL8;
+            else
+                format = norm_fmt[norm.bits / 2 - 1][norm.component];
+        }
+
+        assert(format);
+        return format;
+    }
+
+    Texture::Texture(const uint8_t data[], size_t length) {
+        this->load(data, length);
+    }
+
+    Texture::Texture(const Textures::asset_t &texture)
+        : Texture(texture.data, texture.length) {}
+
+    Texture::Texture(Texture &&other) : Entity<Texture>(std::move(other)) {
+        this->w = other.w;
+        this->h = other.h;
+    }
+
+    void Texture::destroy() {
+        if (this->id)
+            glDeleteTextures(1, &this->id);
+        this->id = 0;
+    }
+
+    void Texture::load(const uint8_t data[], size_t length) {
+        assert(!this->id);
+        glGenTextures(1, &this->id);
+        this->bind();
+
+        SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
+        SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
+        this->w = surface->w;
+        this->h = surface->h;
+        SDL_FreeSurface(loaded_surface);
+        SDL_FreeSurface(surface);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+
+    void Texture::alloc(Format format, unsigned int width, unsigned int height) {
+        assert(!this->id);
+        glGenTextures(1, &this->id);
+        this->w = width;
+        this->h = height;
+        this->bind();
+        glTexImage2D(GL_TEXTURE_2D, 0, format.to_opengl(), width, height, 0, GL_RGBA, GL_BYTE, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    void Texture::bind(unsigned int index) {
+        glActiveTexture(GL_TEXTURE0 + index);
+        glBindTexture(GL_TEXTURE_2D, this->id);
+    }
+
+    Buffer::Buffer() {
+        glGenBuffers(1, &this->id);
+    }
+
+    void Buffer::destroy() {
+        if (this->id)
+            glDeleteBuffers(1, &this->id);
+        this->id = 0;
+    }
+
+    void Buffer::bind(Type type) {
+        glBindBuffer(type, this->id);
+    }
+
+    void Buffer::bind(Type type, unsigned int index) {
+        glBindBufferBase(type, index, this->id);
+    }
+
+    void Buffer::store(Type type, const void *arr, size_t size, bool dynamic) {
+        glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    }
+
+    void Buffer::alloc(Type type, size_t size) {
+        Buffer::store(type, nullptr, size, true);
+    }
+
+    void Buffer::sync(Type type) {
+        unsigned int bit;
+        switch (type) {
+            case shader:
+                bit = GL_SHADER_STORAGE_BARRIER_BIT;
+            default:
+                assert(type == shader);
+                return;
+        }
+
+        glMemoryBarrier(bit);
+    }
+
+    void *Buffer::map(Type type, bool writeable) {
+        return glMapBuffer(type, writeable ? GL_READ_WRITE : GL_READ_ONLY);
+    }
+
+    void Buffer::unmap(Type type) {
+        glUnmapBuffer(type);
+    }
+
+    VertexArray::VertexArray(Buffer &&vbo, Buffer &&ebo)
+        : vbo(std::move(vbo)),
+          ebo(std::move(ebo)) {
+        glGenVertexArrays(1, &this->id);
+        this->bind();
+        this->vbo.bind(Buffer::Type::vertex);
+        this->ebo.bind(Buffer::Type::index);
+    }
+
+    void VertexArray::destroy() {
+        if (this->id)
+            glDeleteVertexArrays(1, &this->id);
+        this->id = 0;
+    }
+
+    void VertexArray::bind() {
+        glBindVertexArray(this->id);
+    }
+
+    void VertexArray::draw_triangles(int vertex_count) {
+        glDrawElements(GL_TRIANGLES, vertex_count, GL_UNSIGNED_INT, nullptr);
+    }
+
+    template<typename T>
+    void VertexArray::vert_attr(unsigned int index, uintptr_t offset, int stride) {
+        constexpr int dimensions = std::extent_v<T>;
+        using attr_t = std::remove_cvref_t<decltype(std::declval<T>()[0])>;
+
+        unsigned int type;
+        if constexpr (std::is_same_v<attr_t, float>)
+            type = GL_FLOAT;
+        if constexpr (std::is_same_v<attr_t, unsigned int>)
+            type = GL_UNSIGNED_INT;
+        if constexpr (std::is_same_v<attr_t, int>)
+            type = GL_INT;
+
+        glVertexAttribPointer(index, dimensions, type, false, stride, (void *)(offset));
+        glEnableVertexAttribArray(index);
+    }
+
+    template void VertexArray::vert_attr<float[1]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<float[2]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<float[3]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<float[4]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<int[1]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<int[2]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<int[3]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<int[4]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<unsigned int[1]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<unsigned int[2]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<unsigned int[3]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<unsigned int[4]>(unsigned int, uintptr_t, int);
+
+    void Uniform::store(float f1) {
+        glUniform1f(this->id, f1);
+    }
+
+    void Uniform::store(float f1, float f2) {
+        glUniform2f(this->id, f1, f2);
+    }
+
+    void Uniform::store(float f1, float f2, float f3) {
+        glUniform3f(this->id, f1, f2, f3);
+    }
+
+    void Uniform::store(float f1, float f2, float f3, float f4) {
+        glUniform4f(this->id, f1, f2, f3, f4);
+    }
+
+    void Uniform::store(unsigned int u1) {
+        glUniform1ui(this->id, u1);
+    }
+
+    void Uniform::store(unsigned int u1, unsigned int u2) {
+        glUniform2ui(this->id, u1, u2);
+    }
+
+    void Uniform::store(unsigned int u1, unsigned int u2, unsigned int u3) {
+        glUniform3ui(this->id, u1, u2, u3);
+    }
+
+    void Uniform::store(unsigned int u1, unsigned int u2, unsigned int u3, unsigned int u4) {
+        glUniform4ui(this->id, u1, u2, u3, u4);
+    }
+
+    void Uniform::store(int i1) {
+        glUniform1i(this->id, i1);
+    }
+
+    void Uniform::store(int i1, int i2) {
+        glUniform2i(this->id, i1, i2);
+    }
+
+    void Uniform::store(int i1, int i2, int i3) {
+        glUniform3i(this->id, i1, i2, i3);
+    }
+
+    void Uniform::store(int i1, int i2, int i3, int i4) {
+        glUniform4i(this->id, i1, i2, i3, i4);
+    }
+
+    template<size_t vec_size>
+    void Uniform::store(const float *arr, size_t count) {
+        if constexpr (vec_size == 1)
+            glUniform1fv(this->id, count, arr);
+        if constexpr (vec_size == 2)
+            glUniform2fv(this->id, count, arr);
+        if constexpr (vec_size == 3)
+            glUniform3fv(this->id, count, arr);
+        if constexpr (vec_size == 4)
+            glUniform4fv(this->id, count, arr);
+    }
+
+    template<size_t vec_size>
+    void Uniform::store(const unsigned int *arr, size_t count) {
+        if constexpr (vec_size == 1)
+            glUniform1uiv(this->id, count, arr);
+        if constexpr (vec_size == 2)
+            glUniform2uiv(this->id, count, arr);
+        if constexpr (vec_size == 3)
+            glUniform3uiv(this->id, count, arr);
+        if constexpr (vec_size == 4)
+            glUniform4uiv(this->id, count, arr);
+    }
+
+    template<size_t vec_size>
+    void Uniform::store(const int *arr, size_t count) {
+        if constexpr (vec_size == 1)
+            glUniform1iv(this->id, count, arr);
+        if constexpr (vec_size == 2)
+            glUniform2iv(this->id, count, arr);
+        if constexpr (vec_size == 3)
+            glUniform3iv(this->id, count, arr);
+        if constexpr (vec_size == 4)
+            glUniform4iv(this->id, count, arr);
+    }
+
+    template void Uniform::store<1>(const float *arr, size_t count);
+    template void Uniform::store<2>(const float *arr, size_t count);
+    template void Uniform::store<3>(const float *arr, size_t count);
+    template void Uniform::store<4>(const float *arr, size_t count);
+    template void Uniform::store<1>(const unsigned int *arr, size_t count);
+    template void Uniform::store<2>(const unsigned int *arr, size_t count);
+    template void Uniform::store<3>(const unsigned int *arr, size_t count);
+    template void Uniform::store<4>(const unsigned int *arr, size_t count);
+    template void Uniform::store<1>(const int *arr, size_t count);
+    template void Uniform::store<2>(const int *arr, size_t count);
+    template void Uniform::store<3>(const int *arr, size_t count);
+    template void Uniform::store<4>(const int *arr, size_t count);
+
+    Shader::Shader(Type type, const char *shader) {
+        this->compile(type, shader);
+    }
+
+    void Shader::compile(Type type, const char *shader) {
+        this->id = glCreateShader(type);
+        glShaderSource(this->id, 1, &shader, nullptr);
+        glCompileShader(id);
+        int success;
+        glGetShaderiv(this->id, GL_COMPILE_STATUS, &success);
+        if (!success) {
+            char log[512];
+            glGetShaderInfoLog(this->id, 512, NULL, log);
+            this->id = 0;
+            throw InitError{log};
+        }
+    }
+
+    void Shader::destroy() {
+        if (this->id)
+            glDeleteShader(this->id);
+        this->id = 0;
+    }
+
+    void Program::attach(const Shader &shader) {
+        if (!this->id)
+            this->id = glCreateProgram();
+        glAttachShader(this->id, shader.id);
+    }
+
+    void Program::destroy() {
+        if (this->id)
+            glDeleteProgram(this->id);
+        this->id = 0;
+    }
+
+    void Program::link() {
+        glLinkProgram(this->id);
+    }
+
+    void Program::bind() {
+        glUseProgram(this->id);
+    }
+
+    Uniform Program::get_uniform(const char *name) {
+        return glGetUniformLocation(this->id, name);
+    }
+
+    void Program::bind_uniform_buffer(const char *name, unsigned int binding) {
+        glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name), binding);
+    }
+
+    void Program::compute(unsigned int x, unsigned int y, unsigned int z) {
+        glDispatchCompute(x, y, z);
+    }
+
+    Renderbuffer::Renderbuffer() {
+        this->load();
+    }
+
+    void Renderbuffer::load() {
+        glGenRenderbuffers(1, &this->id);
+    }
+
+    void Renderbuffer::destroy() {
+        if (this->id)
+            glDeleteRenderbuffers(1, &this->id);
+    }
+
+    void Renderbuffer::bind() {
+        glBindRenderbuffer(GL_RENDERBUFFER, this->id);
+    }
+
+    void Renderbuffer::alloc(const Format &format, int x, int y) {
+        glRenderbufferStorage(GL_RENDERBUFFER, format.to_opengl(), x, y);
+    }
+
+    Framebuffer::Framebuffer() {
+        this->load();
+    }
+
+    void Framebuffer::load() {
+        glGenFramebuffers(1, &this->id);
+    }
+
+    void Framebuffer::destroy() {
+        if (this->id)
+            glDeleteFramebuffers(1, &this->id);
+    }
+
+    void Framebuffer::bind() {
+        glBindFramebuffer(GL_FRAMEBUFFER, this->id);
+    }
+
+    void Framebuffer::unbind() {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void Framebuffer::attach(Attachment attachment, Renderbuffer &buffer) {
+        buffer.bind();
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, this->id);
+    }
+
+    void Framebuffer::attach(unsigned int attachment, Renderbuffer &buffer) {
+        buffer.bind();
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, COLOR + attachment, GL_RENDERBUFFER, this->id);
+    }
+
+    void Framebuffer::attach(Attachment attachment, Texture &buffer) {
+        buffer.bind();
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, this->id, 0);
+    }
+
+    void Framebuffer::attach(unsigned int attachment, Texture &buffer) {
+        buffer.bind();
+        glFramebufferTexture2D(GL_FRAMEBUFFER, COLOR + attachment, GL_TEXTURE_2D, this->id, 0);
+    }
 }
-
-InitError::InitError(const std::string &what) : std::runtime_error(what) {}
-
-InitError::InitError(const char *what) : std::runtime_error(what) {}
-
-InitError::InitError(const unsigned char *what)
-    : std::runtime_error(std::string(
-          what, what + strlen(reinterpret_cast<const char *>(what)))) {}
-
-Context::Context(SDL_Window *window, int major, int minor, bool core)
-    : window(window) {
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                      core ? SDL_GL_CONTEXT_PROFILE_CORE
-                           : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
-  this->context = SDL_GL_CreateContext(window);
-  if (!this->context)
-    throw InitError{SDL_GetError()};
-  ::glewExperimental = true;
-  unsigned int err = glewInit();
-  if (err)
-    throw InitError{glewGetErrorString(err)};
-}
-
-bool Context::enable_vsync() { return SDL_GL_SetSwapInterval(1) >= 0; }
-
-void Context::set_canvas_size(int x, int y) { glViewport(0, 0, x, y); }
-
-void Context::clear() { glClear(GL_COLOR_BUFFER_BIT); }
-
-void Context::set_clear_color(float r, float g, float b, float a) {
-  glClearColor(r, g, b, a);
-}
-
-void Context::sync() { glFinish(); }
-
-void Context::swap_buffer() { SDL_GL_SwapWindow(this->window); }
-
-Texture::Texture() { this->id = 0; }
-
-Texture::Texture(const uint8_t data[], size_t length) {
-  this->id = 0;
-  this->load(data, length);
-}
-
-Texture::Texture(const Textures::asset_t &texture)
-    : Texture(texture.data, texture.length) {}
-
-Texture::Texture(Texture &&other) {
-  this->id = other.release();
-  this->w = other.w;
-  this->h = other.h;
-}
-
-Texture::~Texture() {
-  if (this->id)
-    glDeleteTextures(1, &this->id);
-}
-
-void Texture::load(const uint8_t data[], size_t length) {
-  assert(!this->id);
-  glGenTextures(1, &this->id);
-  this->bind();
-
-  SDL_Surface *loaded_surface =
-      IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
-  SDL_Surface *surface =
-      SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-                  GL_NEAREST_MIPMAP_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, surface->pixels);
-  this->w = surface->w;
-  this->h = surface->h;
-  SDL_FreeSurface(loaded_surface);
-  SDL_FreeSurface(surface);
-  glGenerateMipmap(GL_TEXTURE_2D);
-}
-
-id_t Texture::release() {
-  id_t id = this->id;
-  this->id = 0;
-  return id;
-}
-
-void Texture::bind(unsigned int index) {
-  glActiveTexture(GL_TEXTURE0 + index);
-  glBindTexture(GL_TEXTURE_2D, this->id);
-}
-
-bool Texture::operator!() const { return !this->id; }
-
-Buffer::Buffer() { glGenBuffers(1, &this->id); }
-
-Buffer::Buffer(Buffer &&other) { this->id = other.release(); }
-
-Buffer::~Buffer() {
-  if (this->id)
-    glDeleteBuffers(1, &this->id);
-}
-
-id_t Buffer::release() {
-  id_t id = this->id;
-  this->id = 0;
-  return id;
-};
-
-void Buffer::bind(Type type) { glBindBuffer(type, this->id); }
-
-void Buffer::bind(Type type, unsigned int index) {
-  glBindBufferBase(type, index, this->id);
-}
-
-void Buffer::fill(Type type, const void *arr, size_t size, bool dynamic) {
-  glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
-}
-
-VertexArray::VertexArray(Buffer &&vbo, Buffer &&ebo)
-    : vbo(std::move(vbo)), ebo(std::move(ebo)) {
-  glGenVertexArrays(1, &this->id);
-  this->bind();
-  this->vbo.bind(Buffer::Type::vertex);
-  this->ebo.bind(Buffer::Type::index);
-}
-
-VertexArray::VertexArray(VertexArray &&other)
-    : vbo(std::move(other.vbo)), ebo(std::move(other.ebo)) {
-  this->id = other.release();
-}
-
-VertexArray::~VertexArray() {
-  if (this->id)
-    glDeleteVertexArrays(1, &this->id);
-}
-
-id_t VertexArray::release() {
-  id_t id = this->id;
-  this->id = 0;
-  return id;
-}
-
-void VertexArray::bind() { glBindVertexArray(this->id); }
-
-void VertexArray::draw_triangles(int vertex_count) {
-  glDrawElements(GL_TRIANGLES, vertex_count, GL_UNSIGNED_INT, nullptr);
-}
-
-template <typename T>
-void VertexArray::vert_attr(unsigned int index, uintptr_t offset, int stride) {
-  constexpr int dimensions = std::extent_v<T>;
-  using attr_t = std::remove_cvref_t<decltype(std::declval<T>()[0])>;
-
-  unsigned int type;
-  if constexpr (std::is_same_v<attr_t, float>)
-    type = GL_FLOAT;
-  if constexpr (std::is_same_v<attr_t, unsigned int>)
-    type = GL_UNSIGNED_INT;
-  if constexpr (std::is_same_v<attr_t, int>)
-    type = GL_INT;
-
-  glVertexAttribPointer(index, dimensions, type, false, stride,
-                        (void *)(offset));
-  glEnableVertexAttribArray(index);
-}
-
-template void VertexArray::vert_attr<float[1]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<float[2]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<float[3]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<float[4]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<int[1]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<int[2]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<int[3]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<int[4]>(unsigned int, uintptr_t, int);
-template void VertexArray::vert_attr<unsigned int[1]>(unsigned int, uintptr_t,
-                                                      int);
-template void VertexArray::vert_attr<unsigned int[2]>(unsigned int, uintptr_t,
-                                                      int);
-template void VertexArray::vert_attr<unsigned int[3]>(unsigned int, uintptr_t,
-                                                      int);
-template void VertexArray::vert_attr<unsigned int[4]>(unsigned int, uintptr_t,
-                                                      int);
-
-void Uniform::store(float f1) { glUniform1f(this->id, f1); }
-
-void Uniform::store(float f1, float f2) { glUniform2f(this->id, f1, f2); }
-
-void Uniform::store(float f1, float f2, float f3) {
-  glUniform3f(this->id, f1, f2, f3);
-}
-
-void Uniform::store(float f1, float f2, float f3, float f4) {
-  glUniform4f(this->id, f1, f2, f3, f4);
-}
-
-void Uniform::store(unsigned int u1) { glUniform1ui(this->id, u1); }
-
-void Uniform::store(unsigned int u1, unsigned int u2) {
-  glUniform2ui(this->id, u1, u2);
-}
-
-void Uniform::store(unsigned int u1, unsigned int u2, unsigned int u3) {
-  glUniform3ui(this->id, u1, u2, u3);
-}
-
-void Uniform::store(unsigned int u1, unsigned int u2, unsigned int u3,
-                    unsigned int u4) {
-  glUniform4ui(this->id, u1, u2, u3, u4);
-}
-
-void Uniform::store(int i1) { glUniform1i(this->id, i1); }
-
-void Uniform::store(int i1, int i2) { glUniform2i(this->id, i1, i2); }
-
-void Uniform::store(int i1, int i2, int i3) {
-  glUniform3i(this->id, i1, i2, i3);
-}
-
-void Uniform::store(int i1, int i2, int i3, int i4) {
-  glUniform4i(this->id, i1, i2, i3, i4);
-}
-
-template <size_t vec_size> void Uniform::store(const float *arr, size_t count) {
-  if constexpr (vec_size == 1)
-    glUniform1fv(this->id, count, arr);
-  if constexpr (vec_size == 2)
-    glUniform2fv(this->id, count, arr);
-  if constexpr (vec_size == 3)
-    glUniform3fv(this->id, count, arr);
-  if constexpr (vec_size == 4)
-    glUniform4fv(this->id, count, arr);
-}
-
-template <size_t vec_size>
-void Uniform::store(const unsigned int *arr, size_t count) {
-  if constexpr (vec_size == 1)
-    glUniform1uiv(this->id, count, arr);
-  if constexpr (vec_size == 2)
-    glUniform2uiv(this->id, count, arr);
-  if constexpr (vec_size == 3)
-    glUniform3uiv(this->id, count, arr);
-  if constexpr (vec_size == 4)
-    glUniform4uiv(this->id, count, arr);
-}
-
-template <size_t vec_size> void Uniform::store(const int *arr, size_t count) {
-  if constexpr (vec_size == 1)
-    glUniform1iv(this->id, count, arr);
-  if constexpr (vec_size == 2)
-    glUniform2iv(this->id, count, arr);
-  if constexpr (vec_size == 3)
-    glUniform3iv(this->id, count, arr);
-  if constexpr (vec_size == 4)
-    glUniform4iv(this->id, count, arr);
-}
-
-template void Uniform::store<1>(const float *arr, size_t count);
-template void Uniform::store<2>(const float *arr, size_t count);
-template void Uniform::store<3>(const float *arr, size_t count);
-template void Uniform::store<4>(const float *arr, size_t count);
-template void Uniform::store<1>(const unsigned int *arr, size_t count);
-template void Uniform::store<2>(const unsigned int *arr, size_t count);
-template void Uniform::store<3>(const unsigned int *arr, size_t count);
-template void Uniform::store<4>(const unsigned int *arr, size_t count);
-template void Uniform::store<1>(const int *arr, size_t count);
-template void Uniform::store<2>(const int *arr, size_t count);
-template void Uniform::store<3>(const int *arr, size_t count);
-template void Uniform::store<4>(const int *arr, size_t count);
-
-Program::Program() { this->id = 0; }
-
-Program::Program(const char *vert, const char *frag) { this->load(vert, frag); }
-
-Program::Program(Program &&other) { this->id = other.release(); }
-
-id_t Program::release() {
-  id_t id = this->id;
-  this->id = 0;
-  return id;
-}
-
-inline unsigned int compile_shader(const char *shader, unsigned int type) {
-  unsigned int id = glCreateShader(type);
-  glShaderSource(id, 1, &shader, nullptr);
-  glCompileShader(id);
-  int status;
-  glGetShaderiv(id, GL_COMPILE_STATUS, &status);
-  if (!status) {
-    char log[512];
-    glGetShaderInfoLog(id, 512, NULL, log);
-    throw InitError{log};
-  }
-
-  return id;
-}
-
-void Program::load(const char *vert, const char *frag) {
-  this->id = glCreateProgram();
-  unsigned int vert_shader = compile_shader(vert, GL_VERTEX_SHADER);
-  unsigned int frag_shader = compile_shader(frag, GL_FRAGMENT_SHADER);
-  glAttachShader(this->id, vert_shader);
-  glAttachShader(this->id, frag_shader);
-  glLinkProgram(this->id);
-  glDeleteShader(vert_shader);
-  glDeleteShader(frag_shader);
-}
-
-void Program::bind() { glUseProgram(this->id); }
-
-Uniform Program::get_uniform(const char *name) {
-  return glGetUniformLocation(this->id, name);
-}
-
-void Program::bind_uniform_buffer(const char *name, unsigned int binding) {
-  glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name),
-                        binding);
-}
-
-Program::operator bool() const { return this->id; }
-
-bool Program::operator!() const { return !this->id; }
-} // namespace OpenGL

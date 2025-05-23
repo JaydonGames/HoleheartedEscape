@@ -5,7 +5,7 @@ out vec2 tex_xy;
 
 uniform uvec2 screen;
 uniform uvec2 tex_wh[@];
-uniform ivec2 camera;
+uniform vec3 camera;
 
 #define FLIP_DIAG (1<<0)
 #define FLIP_X (1<<1)
@@ -28,8 +28,8 @@ layout (std140) uniform quad_block {
 void main() {
     Quad quad = quads[gl_VertexID/4];
 
-    vec2 pos = quad.pos + vert*quad.tex_wh - camera + screen/2;
-    pos *= 2.0/screen;
+    vec2 pos = quad.pos + vert*quad.tex_wh - camera.xy*camera.z + (screen*camera.z)/2;
+    pos *= 2.0/(screen*camera.z);
     pos -= 1;
     pos.y *= -1;
 

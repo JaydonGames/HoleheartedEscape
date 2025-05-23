@@ -15,6 +15,7 @@ namespace Render {
         template<typename T>
         Camera(T& renderer) : Camera(renderer.get_camera()){}
         void set(int x, int y);
+        void set(int x, int y, float zoom);
 
     private:
         OpenGL::Program& program;
@@ -36,12 +37,17 @@ namespace Render {
         BatchRenderer();
         void push(const Vec2& pos, const Rect& tex_coords, Texture& tex, unsigned int flags = 0);
         void render();
+        void render(OpenGL::Framebuffer& fbo);
+        void clear();
+        void clear(OpenGL::Framebuffer& fbo);
         void set_canvas(unsigned int x, unsigned int y);
         inline Camera get_camera(){
             return Camera{this->program, this->program.get_uniform("camera")};
         }
 
+
     private:
+        Vec2 canvas;
         void fill_vao(size_t quad_count);
 
         OpenGL::Program program;
@@ -96,7 +102,7 @@ namespace Render {
 
         inline void push(Quad);
         inline void new_queue();
-        inline void clear();
+        inline void clean();
     };
 
 
