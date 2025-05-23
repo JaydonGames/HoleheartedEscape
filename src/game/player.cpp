@@ -1,39 +1,30 @@
 #include "game/player.hpp"
 #include <SDL_events.h>
+#include <SDL_keyboard.h>
 #include "graphics/types.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <utility>
 
-// Player::Player(Render::Vector2D pos) : Square(pos, true) {
-//     m_is_jumping = false;
-// };
-//
-// void Player::input(SDL_Event &e) {
-//     if (e.type == SDL_KEYDOWN) {
-//         switch (e.key.keys m.sym) {
-//             case SDLK_UP:
-//                 if (!m_is_jumping) {
-//                     acceleration.y = -PLAYER_JUMP_FORCE;
-//                     m_is_jumping = true;
-//                 }
-//                 break;
-//             case SDLK_RIGHT:
-//                 acceleration.x = 10;
-//                 break;
-//             case SDLK_LEFT:
-//                 acceleration.x = -10;
-//                 break;
-//         }
-//     }
-//     if (e.type == SDL_KEYUP) {
-//         switch (e.key.keysym.sym) {
-//             case SDLK_RIGHT:
-//                 acceleration.x = 0;
-//                 break;
-//             case SDLK_LEFT:
-//                 acceleration.x = 0;
-//                 break;
-//         }
-//     }
-// }
+Render::Vector2D Player::PLAYER_JUMP_FORCE;
+
+Player::Player(Render::Vector2D pos) : Square(pos) {
+    PLAYER_JUMP_FORCE = Render::Vector2D(0, -5000.0f);
+    is_jumping = false;
+};
+
+void Player::input() {
+    const Uint8* keystate = SDL_GetKeyboardState(NULL);
+
+    if (keystate[SDL_SCANCODE_UP]) {
+        accelerate(PLAYER_JUMP_FORCE);
+    }
+
+    if (keystate[SDL_SCANCODE_LEFT]) {
+        accelerate(Render::Vector2D(-PLAYER_SPD, 0));
+    }
+
+    if (keystate[SDL_SCANCODE_RIGHT]) {
+        accelerate(Render::Vector2D(PLAYER_SPD, 0));
+    }
+}

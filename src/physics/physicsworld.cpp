@@ -11,15 +11,14 @@
 #include <iostream>
 
 PhysicsWorld::PhysicsWorld() {
-    m_gravity = Render::Vector2D(0, 50.0f);
+    m_gravity = Render::Vector2D(0, 500.0f);
 };
 
-int PhysicsWorld::add_square(Square&& square) {
-    m_squares.push_back(std::move(square));
-    return m_squares.size() - 1;
+void PhysicsWorld::add_square(Square& square) {
+    m_squares.push_back(&square);
 }
 
-Square& PhysicsWorld::get_square(int i) {
+Square* PhysicsWorld::get_square(int i) {
     return m_squares[i];
 }
 
@@ -32,20 +31,17 @@ void PhysicsWorld::update(double dt) {
 }
 
 void PhysicsWorld::apply_gravity(double dt) {
-    for (Square& square : m_squares) {
-        if (!square.is_static) {
-            std::array<VerletParticle*, 4> particles = square.get_particles();
-            for (VerletParticle* particle : particles) {
-                particle->accelerate(m_gravity);
-            }
+    for (Square* square : m_squares) {
+        if (!square->is_static) {
+            square->accelerate(m_gravity);
         }
     }
 }
 
 void PhysicsWorld::update_positions(double dt) {
-    for (Square& square : m_squares) {
-        if (!square.is_static) {
-            std::array<VerletParticle*, 4> particles = square.get_particles();
+    for (Square* square : m_squares) {
+        if (!square->is_static) {
+            std::array<VerletParticle*, 4> particles = square->get_particles();
             for (VerletParticle* particle : particles) {
                 particle->update_position(dt);
             }
@@ -54,12 +50,12 @@ void PhysicsWorld::update_positions(double dt) {
 }
 
 void PhysicsWorld::satisfy_constraints() {
-    for (Square& square : m_squares) {
-        if (square.is_static)
+    for (Square* square : m_squares) {
+        if (square->is_static)
             continue;
 
-        std::array<Constraint*, 4> constraints = square.get_constraints();
-        std::array<VerletParticle*, 4> particles = square.get_particles();
+        std::array<Constraint*, 4> constraints = square->get_constraints();
+        std::array<VerletParticle*, 4> particles = square->get_particles();
 
         for (int j = 0; j < 10; ++j) {
             for (int i = 0; i < 4; ++i) {
@@ -71,7 +67,7 @@ void PhysicsWorld::satisfy_constraints() {
                     continue;
 
                 Render::Vector2D delta = p2->curr_position - p1->curr_position;
-                float delta_length = std::sqrt(delta.dot_product(delta));
+                float delta_length = std::sqrt(abs(delta.dot_product(delta)));
                 float diff = (delta_length - c->rest_length) / delta_length;
 
                 if (p1->is_static) {
@@ -89,12 +85,12 @@ void PhysicsWorld::satisfy_constraints() {
 
 void PhysicsWorld::solve_collisions() {
     for (int j = 0; j < m_squares.size(); ++j) {
-        Square& square_1 = m_squares[j];
-        std::array<Render::Vector2D, 2> axes_1 = square_1.get_axes();
+        Square* square_1 = m_squares[j];
+        std::array<Render::Vector2D, 2> axes_1 = square_1->get_axes();
         for (int i = (j + 1); i < m_squares.size(); ++i) {
             bool is_collide = true;
-            Square& square_2 = m_squares[i];
-            std::array<Render::Vector2D, 2> axes_2 = square_2.get_axes();
+            Square* square_2 = m_squares[i];
+            std::array<Render::Vector2D, 2> axes_2 = square_2->get_axes();
 
             /*
              NOTE: The normal or depth does not indicate which direction
@@ -107,8 +103,8 @@ void PhysicsWorld::solve_collisions() {
             bool do_flip_direction;
 
             for (Render::Vector2D axis : axes_1) {
-                Projection p1 = square_1.project(axis);
-                Projection p2 = square_2.project(axis);
+                Projection p1 = square_1->project(axis);
+                Projection p2 = square_2->project(axis);
 
                 if (!p1.is_overlap(p2)) {
                     is_collide = false;
@@ -127,8 +123,8 @@ void PhysicsWorld::solve_collisions() {
                 continue;
 
             for (Render::Vector2D axis : axes_2) {
-                Projection p1 = square_1.project(axis);
-                Projection p2 = square_2.project(axis);
+                Projection p1 = square_1->project(axis);
+                Projection p2 = square_2->project(axis);
 
                 if (!p1.is_overlap(p2)) {
                     is_collide = false;
@@ -156,21 +152,21 @@ void PhysicsWorld::solve_collisions() {
     }
 }
 
-void PhysicsWorld::resolve_collision(Square& square_1, Square& square_2, Render::Vector2D normal, double depth) {
-    if (square_1.is_static) {
-        for (VerletParticle* particle : square_2.get_particles()) {
+void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, Render::Vector2D normal, double depth) {
+    if (object_1->is_static) {
+        for (VerletParticle* particle : object_2->get_particles()) {
             particle->curr_position = particle->curr_position + normal * depth;
         }
-    } else if (square_2.is_static) {
-        for (VerletParticle* particle : square_1.get_particles()) {
+    } else if (object_2->is_static) {
+        for (VerletParticle* particle : object_1->get_particles()) {
             particle->curr_position = particle->curr_position + normal * depth;
         }
     } else {
-        for (VerletParticle* particle : square_1.get_particles()) {
-            particle->curr_position = particle->curr_position - normal * (depth / 2.0f);
-        }
-        for (VerletParticle* particle : square_2.get_particles()) {
+        for (VerletParticle* particle : object_1->get_particles()) {
             particle->curr_position = particle->curr_position + normal * (depth / 2.0f);
+        }
+        for (VerletParticle* particle : object_2->get_particles()) {
+            particle->curr_position = particle->curr_position - normal * (depth / 2.0f);
         }
     }
 }

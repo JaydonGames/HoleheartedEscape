@@ -6,15 +6,16 @@
 #include "game/object.hpp"
 #include "physics/square.hpp"
 
-// class Player : public Square {
-// public:
-//     static constexpr float PLAYER_MAX_SPD = 300;
-//     static constexpr float PLAYER_JUMP_FORCE = 40;
-//
-//     Player(Render::Vector2D pos);
-//
-//     void input(SDL_Event &e);
-//
-// private:
-//     bool m_is_jumping;
-// };
+// TODO: Cap player speed in all directions
+// add friction and drag to all objects
+class Player : public Square {
+    public:
+        static Render::Vector2D PLAYER_JUMP_FORCE;
+        static constexpr int PLAYER_SPD = 500;
+
+        Player(Render::Vector2D pos);
+
+        void input();
+
+        bool is_jumping;
+};

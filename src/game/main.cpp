@@ -6,8 +6,8 @@
 #include "graphics/render.hpp"
 #include "tiled/map.hpp"
 #include "assets.hpp"
-#include "game/player.hpp"
 #include "game/object.hpp"
+#include "game/player.hpp"
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
 #include <array>
@@ -19,6 +19,7 @@ constexpr int SCREEN_HEIGHT = 1080;
 constexpr int SCREEN_FPS = 60;
 constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
+// TODO: Modularize this (Aydon help)
 int main() {
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
@@ -44,8 +45,13 @@ int main() {
     OpenGL::Texture object_tex{Textures::objects};
 
     PhysicsWorld engine;
-    Square player{Render::Vector2D(64, 160), 16.0f};
-    int player_index = engine.add_square(std::move(player));
+
+    Player player{Render::Vector2D(64, 160)};
+    engine.add_square(player);
+
+    Square object{Render::Vector2D(80, 224), 16.0f};
+    engine.add_square(object);
+
     Tiled::Layer collision_layer = test_map.layers[0];
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
@@ -53,10 +59,9 @@ int main() {
             if (tile.empty)
                 continue;
             Square collision_tile{Render::Vector2D(x * 16, y * 16), 16.0f, true};
-            engine.add_square(std::move(collision_tile));
+            engine.add_square(collision_tile);
         }
     }
-    ObjectTest collision_object{80, 224, collision_layer};
 
     Uint64 LAST = 0;
     Uint64 CURR = SDL_GetPerformanceCounter();
@@ -81,37 +86,13 @@ int main() {
                 running = false;
                 break;
             }
-            if (e.type == SDL_KEYDOWN) {
-                switch (e.key.keysym.sym) {
-                    case SDLK_UP: {
-                        std::cout << "test\n";
-                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
-                        for (VerletParticle *p : particles) {
-                            p->accelerate(Render::Vector2D(0, -1000.0f));
-                        }
-                        break;
-                    }
-                    case SDLK_RIGHT: {
-                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
-                        for (VerletParticle *p : particles) {
-                            p->accelerate(Render::Vector2D(200.0f, 0));
-                        }
-                        break;
-                    }
-                    case SDLK_LEFT: {
-                        std::array<VerletParticle *, 4> particles = engine.get_square(player_index).get_particles();
-                        for (VerletParticle *p : particles) {
-                            p->accelerate(Render::Vector2D(-200.0f, 0));
-                        }
-                        break;
-                    }
-                }
-            }
         }
+        player.input();
+        std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
+        std::cout << "y: " << player.get_particles()[0]->acceleration.y << "\n\n";
 
         // Updating
         engine.update(dt);
-        collision_object.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
         for (auto &layer : test_map.layers) {
@@ -126,21 +107,21 @@ int main() {
             }
         }
 
-        Render::Vector2D player_curr_position = engine.get_square(player_index).get_curr_position();
+        Render::Vector2D player_curr_position = player.get_curr_position();
         renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
-        std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
-        std::cout << "0x: " << parts[0]->curr_position.x << '\n';
-        std::cout << "0y: " << parts[0]->curr_position.y << '\n';
-        std::cout << "1x: " << parts[1]->curr_position.x << '\n';
-        std::cout << "1y: " << parts[1]->curr_position.y << '\n';
-        std::cout << "2x: " << parts[2]->curr_position.x << '\n';
-        std::cout << "2y: " << parts[2]->curr_position.y << '\n';
-        std::cout << "3x: " << parts[3]->curr_position.x << '\n';
-        std::cout << "3y: " << parts[3]->curr_position.y << '\n';
-        std::cout << '\n';
+        // std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
+        // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
+        // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
+        // std::cout << "1x: " << parts[1]->curr_position.x << '\n';
+        // std::cout << "1y: " << parts[1]->curr_position.y << '\n';
+        // std::cout << "2x: " << parts[2]->curr_position.x << '\n';
+        // std::cout << "2y: " << parts[2]->curr_position.y << '\n';
+        // std::cout << "3x: " << parts[3]->curr_position.x << '\n';
+        // std::cout << "3y: " << parts[3]->curr_position.y << '\n';
+        // std::cout << '\n';
 
-        Render::Rect test_object_rect = collision_object.get_rect();
-        renderer.push({test_object_rect.x, test_object_rect.y}, {0, 0, 16, 16}, object_tex, 0);
+        Render::Vector2D object_curr_position = object.get_curr_position();
+        renderer.push({object_curr_position.x, object_curr_position.y}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
         context.clear();

@@ -37,6 +37,7 @@ struct Projection {
 
 class Square {
     public:
+        // TODO: ADD mass
         bool is_static;
         float side_length;
 
@@ -58,9 +59,9 @@ class Square {
 
         Projection project(Render::Vector2D axis);
 
-        void update();
+        void accelerate(Render::Vector2D a);
 
     private:
-        std::array<std::unique_ptr<VerletParticle>, 4> m_vertices;
+        std::array<VerletParticle, 4> m_vertices;
         std::array<std::unique_ptr<Constraint>, 4> m_constraints;
 };
