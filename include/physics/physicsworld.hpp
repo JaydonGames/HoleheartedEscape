@@ -6,7 +6,7 @@ class PhysicsWorld {
     public:
         PhysicsWorld();
 
-        void add_square(Square& square);
+        void add_square(Square* square);
 
         Square* get_square(int i);
 

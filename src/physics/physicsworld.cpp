@@ -14,8 +14,8 @@ PhysicsWorld::PhysicsWorld() {
     m_gravity = Render::Vector2D(0, 500.0f);
 };
 
-void PhysicsWorld::add_square(Square& square) {
-    m_squares.push_back(&square);
+void PhysicsWorld::add_square(Square* square) {
+    m_squares.push_back(square);
 }
 
 Square* PhysicsWorld::get_square(int i) {

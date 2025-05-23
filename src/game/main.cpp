@@ -11,6 +11,7 @@
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
 #include <array>
+#include <deque>
 #include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
@@ -47,19 +48,20 @@ int main() {
     PhysicsWorld engine;
 
     Player player{Render::Vector2D(64, 160)};
-    engine.add_square(player);
+    engine.add_square(&player);
 
     Square object{Render::Vector2D(80, 224), 16.0f};
-    engine.add_square(object);
+    engine.add_square(&object);
 
     Tiled::Layer collision_layer = test_map.layers[0];
+    std::deque<Square> collision_tiles;
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
             Tiled::Tile &tile = collision_layer.tiles[y][x];
             if (tile.empty)
                 continue;
-            Square collision_tile{Render::Vector2D(x * 16, y * 16), 16.0f, true};
-            engine.add_square(collision_tile);
+            collision_tiles.emplace_back(Render::Vector2D(x * 16, y * 16), 16.0f, true);
+            engine.add_square(&collision_tiles.back());
         }
     }
 
