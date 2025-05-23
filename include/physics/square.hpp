@@ -63,5 +63,5 @@ class Square {
 
     private:
         std::array<VerletParticle, 4> m_vertices;
-        std::array<std::unique_ptr<Constraint>, 4> m_constraints;
+        std::array<Constraint, 4> m_constraints;
 };
