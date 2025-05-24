@@ -37,11 +37,9 @@ int main() {
     constexpr Render::Vec2 canvas{SCREEN_WIDTH, SCREEN_HEIGHT};
 
     OpenGL::Framebuffer fbo;
-    OpenGL::Texture color;
-    fbo.bind();
-    color.alloc(OpenGL::format<8>(OpenGL::Format::RGBA), SCREEN_WIDTH, SCREEN_HEIGHT);
+    OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
+    fbo.create();
     fbo.attach(0, color);
-    fbo.unbind();
 
     Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
     Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
@@ -118,7 +116,7 @@ int main() {
         }
 
         Render::Vector2D player_curr_position = player.get_curr_position();
-        renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
+        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0);
         // std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
         // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
@@ -131,7 +129,7 @@ int main() {
         // std::cout << '\n';
 
         Render::Vector2D object_curr_position = object.get_curr_position();
-        renderer.push({object_curr_position.x, object_curr_position.y}, {0, 0, 16, 16}, object_tex, 0);
+        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
         renderer.set_canvas(canvas.x, canvas.y);

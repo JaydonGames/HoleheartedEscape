@@ -35,9 +35,8 @@ namespace Render {
         unsigned int size = this->renderer.queues[queue].quad_end - quad_begin;
         assert(size <= BatchRenderer::max_quads);
         assert(size * sizeof(Quad) <= 16 * (2 << 9));
-        this->renderer.ubo.store(OpenGL::Buffer::Type::uniform, this->renderer.quads.data() + quad_begin,
-                                 size * sizeof(Quad));
-        this->renderer.vao.draw_triangles(size * 6);
+        this->renderer.ubo.store(this->renderer.quads.data() + quad_begin, size * sizeof(Quad));
+        this->renderer.program.draw(this->renderer.vao, OpenGL::Program::triangles, size * 6);
     }
 
     OpenGL::Shader get_shader(bool frag) {
@@ -50,7 +49,9 @@ namespace Render {
         : max_textures(OpenGL::max_textures()),
           program{get_shader(0), get_shader(1)},
           screen_size(program.get_uniform("screen")),
-          tex_sizes(program.get_uniform("tex_wh")) {
+          tex_sizes(program.get_uniform("tex_wh")),
+          vao(0, sizeof(unsigned int[2])),
+          ubo(OpenGL::Buffer::uniform){
         program.bind();
         for (int i = 0; i < this->max_textures; ++i)
             this->program.get_uniform(("tex[" + std::to_string(i) + "]").c_str()).store(i);
@@ -95,8 +96,7 @@ namespace Render {
     void BatchRenderer::render() {
         this->program.bind();
         this->vao.bind();
-        this->ubo.bind(OpenGL::Buffer::Type::uniform);
-        this->ubo.bind(OpenGL::Buffer::Type::uniform, 0);
+        this->ubo.bind(0);
         this->new_queue();
 
         OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
@@ -118,7 +118,6 @@ namespace Render {
     void BatchRenderer::clear() {
         OpenGL::Context::clear();
     }
-
 
     void BatchRenderer::clear(OpenGL::Framebuffer& fbo) {
         fbo.bind();
@@ -149,8 +148,8 @@ namespace Render {
             indices[i] = {vertex + 0, vertex + 1, vertex + 3, vertex + 1, vertex + 2, vertex + 3};
         }
 
-        OpenGL::Buffer::store(OpenGL::Buffer::vertex, quads.get(), sizeof(QuadVerts) * quad_count);
-        OpenGL::Buffer::store(OpenGL::Buffer::index, &indices.get()[0][0], sizeof(QuadIndices) * quad_count);
+        this->vao.get_vbo().store(quads.get(), sizeof(QuadVerts) * quad_count);
+        this->vao.get_ebo().store(&indices.get()[0][0], sizeof(QuadIndices) * quad_count);
         this->vao.vert_attr<unsigned int[2]>(0);
     }
 

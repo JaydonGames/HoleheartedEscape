@@ -133,7 +133,7 @@ void Map::register_tileset(const char* filename, const char* tileset_string) {
     std::vector<Tile::Data> tiles;
     for (size_t i = 0; i < tile_count; ++i) {
         float x = i % column_count, y = i / column_count;
-        tiles.emplace_back(Render::Rect{x * tile_width, y * tile_height, tile_width, tile_height},
+        tiles.emplace_back(Render::Rect{int(x * tile_width), int(y * tile_height), tile_width, tile_height},
                            Map::get_texture(image_file));
     }
 

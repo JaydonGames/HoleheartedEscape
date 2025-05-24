@@ -7,7 +7,6 @@
 #include "graphics/types.hpp"
 #include "physics/square.hpp"
 #include "physics/physicsworld.hpp"
-#include <SDL2/SDL_audio.h>
 #include <iostream>
 
 PhysicsWorld::PhysicsWorld() {

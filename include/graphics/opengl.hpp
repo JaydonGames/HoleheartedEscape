@@ -23,49 +23,11 @@ namespace OpenGL {
         InitError(const unsigned char* what);
     };
 
-    template<typename T>
-    class Entity {
-    public:
-        Entity(const Entity&) = delete;
-        Entity& operator=(const Entity&) = delete;
-
-        Entity(Entity&& entity) {
-            id = entity.release();
-        }
-
-        Entity& operator=(Entity&& entity) {
-            id = entity.release();
-        }
-
-        ~Entity() {
-            if (this->id)
-                static_cast<T*>(this)->destroy();
-        }
-
-        id_t release() {
-            id_t id = this->id;
-            this->id = 0;
-            return id;
-        }
-
-        operator bool() {
-            return id;
-        }
-
-        bool operator!() {
-            return !static_cast<T*>(this)->operator bool();
-        }
-
-    protected:
-        Entity() {}
-        id_t id = 0;
-    };
-
     class Context {
     public:
         /* The window must be created with SDL_WINDOW_OPENGL and
          * not already have an attached OpenGL context */
-        Context(SDL_Window* window, int major = 4, int minor = 1, bool core = true);
+        Context(SDL_Window* window, int major = 4, int minor = 5, bool core = true);
         void bind();
 
         /* Returns false if vsync isn't supported */
@@ -80,6 +42,49 @@ namespace OpenGL {
     private:
         void* context;
         SDL_Window* window;
+    };
+
+    template<typename T>
+    class Entity {
+    public:
+        Entity(const Entity&) = delete;
+        Entity& operator=(const Entity&) = delete;
+
+        Entity(Entity&& entity) {
+            id = entity.release();
+        }
+
+        Entity& operator=(Entity&& entity) {
+            id = entity.release();
+            return *this;
+        }
+
+        ~Entity() {
+            if (this->id)
+                static_cast<T*>(this)->destroy();
+        }
+
+        id_t release() {
+            id_t id = this->id;
+            this->id = 0;
+            return id;
+        }
+
+        id_t get() {
+            return id;
+        }
+
+        operator bool() {
+            return id;
+        }
+
+        bool operator!() {
+            return !static_cast<T*>(this)->operator bool();
+        }
+
+    protected:
+        Entity() {}
+        id_t id = 0;
     };
 
     struct Format {
@@ -122,70 +127,55 @@ namespace OpenGL {
         return fmt;
     }
 
-    class Texture : public Entity<Texture> {
-    public:
-        Texture() {}
-        Texture(const uint8_t data[], size_t length);
-        Texture(const Textures::asset_t& texture);
-        Texture(Texture&&);
-
-        void load(const uint8_t data[], size_t length);
-        void alloc(Format format, unsigned int width, unsigned int height);
-        void destroy();
-        void bind(unsigned int index = 0);
-
-        inline unsigned int width() const {
-            return this->w;
-        }
-
-        inline unsigned int height() const {
-            return this->h;
-        }
-
-    private:
-        int w, h;
-    };
-
     class Buffer : public Entity<Buffer> {
     public:
-        enum Type : unsigned int {
-            /* Values from OpenGL */
-            vertex = 0x8892,
-            index = 0x8893,
-            shader = 0x90D2,
-            uniform = 0x8A11
-        };
+        enum Type : unsigned int { vertex = 0x8892, index = 0x8893, shader = 0x90D2, uniform = 0x8A11 };
 
-        Buffer();
+        Buffer() {}
+        Buffer(Type type);
+        Buffer(Type type, const void* arr, size_t size, bool dynamic = true);
+        Buffer(Type type, size_t size);
 
+        void create(Type type);
         void destroy();
-        void bind(Type type);
-        void bind(Type type, unsigned int index);
 
-        static void store(Type type, const void* arr, size_t size, bool dynamic = true);
-        static void alloc(Type type, size_t size);
-        static void sync(Type type);
-        static void* map(Type type, bool writeable = true);
-        static void unmap(Type type);
+        void bind(unsigned int index);
+        void store(const void* arr, size_t size, bool dynamic = true);
+        void alloc(size_t size);
+
+        void sync();
+        void* map(bool writeable = true);
+        void unmap();
+
+    private:
+        Type type = (Type)0;
+        friend class VertexArray;
     };
 
-    class VertexArray : public Entity<Buffer> {
+    class VertexArray : public Entity<VertexArray> {
     public:
-        VertexArray(Buffer&& vbo = Buffer{}, Buffer&& ebo = Buffer{});
+        VertexArray() {}
+        VertexArray(ptrdiff_t offset, int stride);
 
+        void create();
         void destroy();
         void bind();
-        void draw_triangles(int vertex_count);
 
+        Buffer& attach_vbo(Buffer&& buffer, ptrdiff_t offset, int stride);
+        Buffer& attach_ebo(Buffer&& buffer);
+        Buffer& get_vbo();
+        Buffer& get_ebo();
         template<typename T>
-        void vert_attr(unsigned int index, uintptr_t offset = 0, int stride = sizeof(T));
+        void vert_attr(unsigned int index, unsigned int relative_offset = 0, bool normalized = false);
 
-    protected:
+    private:
         Buffer vbo, ebo;
     };
 
     class Uniform {
     public:
+        Uniform() {}
+
         void store(float);
         void store(float, float);
         void store(float, float, float);
@@ -207,7 +197,7 @@ namespace OpenGL {
         void store(const int* arr, size_t count);
 
     protected:
-        int id;
+        int id = 0;
         Uniform(int id)
             : id(id) {}
         friend class Program;
@@ -226,42 +216,78 @@ namespace OpenGL {
 
         Shader() {}
         Shader(Type type, const char* shader);
-        void compile(Type type, const char* shader);
+
+        void create(Type type, const char* shader);
         void destroy();
+
         friend class Program;
     };
 
     class Program : public Entity<Program> {
     public:
+        enum DrawMode {
+            triangles = 0x0004,
+        };
+
         Program() {}
+        Program(std::initializer_list<Shader> shaders);
+        Program(std::initializer_list<Shader*> shaders);
+
+        void create();
+        void destroy();
+        void bind();
+
         void attach(const Shader&);
         void link();
 
-        Program(std::initializer_list<Shader> shaders) {
-            for (const Shader& shader : shaders)
-                this->attach(shader);
-            this->link();
-        }
-
-        Program(std::initializer_list<std::reference_wrapper<Shader>> shaders) {
-            for (Shader& shader : shaders)
-                this->attach(shader);
-            this->link();
-        }
-
-        void destroy();
-        void bind();
         Uniform get_uniform(const char* name);
         void bind_uniform_buffer(const char* name, unsigned int binding);
+
         void compute(unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
+        void draw(VertexArray& vao, DrawMode target, int vert_count);
+    };
+
+    class Texture : public Entity<Texture> {
+    public:
+        enum Type : unsigned int {
+            tex2d = 0x0DE1,
+            tex3d = 0x806F,
+        };
+
+        Texture() {}
+        Texture(Type type);
+        Texture(Type type, const uint8_t data[], size_t length, Format fmt = format<8>(Format::RGBA));
+        Texture(Type type, unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
+        Texture(const Textures::asset_t& texture);
+        Texture(Texture&&);
+
+        void create(Type);
+        void destroy();
+
+        void bind(unsigned int index);
+        void store(const uint8_t data[], size_t length, Format fmt = format<8>(Format::RGBA));
+        void alloc(unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
+
+        inline unsigned int width() const {
+            return this->w;
+        }
+
+        inline unsigned int height() const {
+            return this->h;
+        }
+
+    private:
+        int w, h;
     };
 
     class Renderbuffer : public Entity<Renderbuffer> {
     public:
-        Renderbuffer();
-        void load();
+        Renderbuffer() {}
+        Renderbuffer(const Format& format, int x, int y);
+
+        void create();
         void destroy();
-        void bind();
+
         void alloc(const Format& format, int x, int y);
     };
 
@@ -274,9 +300,9 @@ namespace OpenGL {
             DEPTH_STENCIL = 0x821A,
         };
 
-        Framebuffer();
-        void load();
+        void create();
         void destroy();
+
         void bind();
         void unbind();
 
@@ -284,7 +310,6 @@ namespace OpenGL {
         void attach(unsigned int color_attachment, Renderbuffer& buffer);
         void attach(Attachment attachment, Texture& buffer);
         void attach(unsigned int color_attachment, Texture& buffer);
-
     };
 
 }
