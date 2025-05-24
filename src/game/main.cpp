@@ -22,21 +22,22 @@ constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 // TODO: Modularize this (Aydon help)
 int main() {
-    Render::Vec2 screen{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+    constexpr Render::Vec2 start_size{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
 
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen.x,
-                                          screen.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, start_size.x,
+                                          start_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
     OpenGL::Context context{window};
     Render::BatchRenderer renderer;
-    Render::Camera camera{renderer};
+    Render::Camera screen_camera, camera;
+    Render::Canvas canvas{SCREEN_WIDTH, SCREEN_HEIGHT}, screen{start_size.x, start_size.y};
+    camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
     context.set_clear_color(0, 0, 0);
     context.enable_vsync();
-    constexpr Render::Vec2 canvas{SCREEN_WIDTH, SCREEN_HEIGHT};
 
-    OpenGL::Framebuffer fbo;
+    OpenGL::Framebuffer& fbo = canvas.fbo;
     OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
     fbo.create();
     fbo.attach(0, color);
@@ -92,8 +93,10 @@ int main() {
                 running = false;
                 break;
             }
-            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
-                screen = {e.window.data1, e.window.data2};
+            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
+                screen.x = e.window.data1;
+                screen.y = e.window.data2;
+            }
         }
         player.input();
         std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
@@ -132,18 +135,17 @@ int main() {
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
-        renderer.set_canvas(canvas.x, canvas.y);
-        camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
-        renderer.clear(fbo);
-        renderer.render(fbo);
+        camera.bind();
+        renderer.clear(canvas);
+        renderer.render(canvas);
 
-        renderer.set_canvas(screen.x, screen.y);
+        screen_camera.bind();
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
-        camera.set(screen.x / 2, screen.y / 2, zoom);
+        screen_camera.set(screen.x / 2, screen.y / 2, zoom);
         renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
-                      {0, 0, canvas.x, canvas.y}, color, Render::FlipY);
-        renderer.clear();
-        renderer.render();
+                      {0, 0, int(canvas.x), int(canvas.y)}, color, Render::FlipY);
+        renderer.clear(screen);
+        renderer.render(screen);
 
         context.swap_buffer();
 

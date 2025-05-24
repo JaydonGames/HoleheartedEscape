@@ -13,7 +13,7 @@ Tile::Tile(uint32_t gid, const std::vector<std::pair<uint32_t, size_t>>& tileset
     empty = false;
     this->render_flags |= gid & (1 << 31) ? Render::Flags::FlipX : 0;
     this->render_flags |= gid & (1 << 30) ? Render::Flags::FlipY : 0;
-    this->render_flags |= gid & (1 << 29) ? Render::Flags::FlipDiagonally : 0;
+    this->render_flags |= gid & (1 << 29) ? Render::Flags::FlipDiag : 0;
     gid &= 0xfffffff;
 
     for (this->tileset = 0; tileset + 1 < tileset_gids.size(); ++tileset)

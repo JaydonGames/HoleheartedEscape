@@ -161,8 +161,8 @@ namespace OpenGL {
         void destroy();
         void bind();
 
-        Buffer& attach_vbo(Buffer&& buffer, ptrdiff_t offset, int stride);
-        Buffer& attach_ebo(Buffer&& buffer);
+        Buffer& attach_vbo(ptrdiff_t offset, int stride, Buffer&& buffer = Buffer{OpenGL::Buffer::vertex});
+        Buffer& attach_ebo(Buffer&& buffer = Buffer{OpenGL::Buffer::index});
         Buffer& get_vbo();
         Buffer& get_ebo();
         template<typename T>
@@ -225,10 +225,6 @@ namespace OpenGL {
 
     class Program : public Entity<Program> {
     public:
-        enum DrawMode {
-            triangles = 0x0004,
-        };
-
         Program() {}
         Program(std::initializer_list<Shader> shaders);
         Program(std::initializer_list<Shader*> shaders);
@@ -241,10 +237,11 @@ namespace OpenGL {
         void link();
 
         Uniform get_uniform(const char* name);
-        void bind_uniform_buffer(const char* name, unsigned int binding);
+        void bind_uniform_block(const char* name, unsigned int binding);
 
         void compute(unsigned int x = 1, unsigned int y = 1, unsigned int z = 1);
-        void draw(VertexArray& vao, DrawMode target, int vert_count);
+        void draw_tri(VertexArray& vao, int vert_count);
+        void draw_patches(VertexArray& vao, int vert_count, int vert_per_patch);
     };
 
     class Texture : public Entity<Texture> {
@@ -299,6 +296,8 @@ namespace OpenGL {
             STENCIL = 0x8D20,
             DEPTH_STENCIL = 0x821A,
         };
+
+        Framebuffer(){};
 
         void create();
         void destroy();

@@ -174,8 +174,8 @@ namespace OpenGL {
 
     VertexArray::VertexArray(ptrdiff_t offset, int stride) {
         this->create();
-        this->attach_vbo(Buffer{Buffer::vertex}, offset, stride);
-        this->attach_ebo(Buffer{Buffer::index});
+        this->attach_vbo(offset, stride);
+        this->attach_ebo();
     }
 
     void VertexArray::create() {
@@ -193,7 +193,7 @@ namespace OpenGL {
         glBindVertexArray(this->id);
     }
 
-    Buffer &VertexArray::attach_vbo(Buffer &&buffer, ptrdiff_t offset, int stride) {
+    Buffer &VertexArray::attach_vbo(ptrdiff_t offset, int stride, Buffer &&buffer) {
         glVertexArrayVertexBuffer(this->id, 0, buffer.get(), offset, stride);
         this->vbo = std::move(buffer);
         return this->vbo;
@@ -406,7 +406,7 @@ namespace OpenGL {
         return glGetUniformLocation(this->id, name);
     }
 
-    void Program::bind_uniform_buffer(const char *name, unsigned int binding) {
+    void Program::bind_uniform_block(const char *name, unsigned int binding) {
         glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name), binding);
     }
 
@@ -415,10 +415,17 @@ namespace OpenGL {
         glDispatchCompute(x, y, z);
     }
 
-    void Program::draw(VertexArray &vao, DrawMode target, int vert_count) {
+    void Program::draw_tri(VertexArray &vao, int vert_count) {
         this->bind();
         vao.bind();
-        glDrawElements(target, vert_count, GL_UNSIGNED_INT, nullptr);
+        glDrawElements(GL_TRIANGLES, vert_count, GL_UNSIGNED_INT, nullptr);
+    }
+
+    void Program::draw_patches(VertexArray& vao, int vert_count, int vert_per_patch){
+        glPatchParameteri(GL_PATCH_VERTICES, vert_per_patch);
+        this->bind();
+        vao.bind();
+        glDrawArrays(GL_PATCHES, 0, vert_count);
     }
 
     Texture::Texture(Type type) {

@@ -6,157 +6,88 @@
 #include "graphics/render.hpp"
 #include "assets.hpp"
 
-namespace Render {
+// TODO REMOVE
+#include <GL/glew.h>
 
-    void Camera::set(int x, int y) {
-        this->program.bind();
-        this->camera.store(float(x), float(y));
+namespace Render {
+    inline constexpr unsigned int camera_uniform_binding = 10;
+
+    Camera::Camera() {
+        ubo.create(OpenGL::Buffer::uniform);
     }
 
     void Camera::set(int x, int y, float zoom) {
+        struct {
+            int x, y;
+            float zoom;
+        } data{x, y, zoom};
+        ubo.store(&data, sizeof(data));
+    }
+
+    void Camera::bind() {
+        ubo.bind(camera_uniform_binding);
+    }
+
+    BatchRenderer::BatchRenderer() {
+        OpenGL::Shader vert{OpenGL::Shader::vert, Shaders::batch_vert};
+        OpenGL::Shader frag{OpenGL::Shader::frag, Shaders::batch_frag};
+        OpenGL::Shader tcs{OpenGL::Shader::tcs, Shaders::batch_tcs};
+        OpenGL::Shader tes{OpenGL::Shader::tes, Shaders::batch_tes};
+        this->program.create();
+        this->program.attach(vert);
+        this->program.attach(frag);
+        this->program.attach(tcs);
+        this->program.attach(tes);
+        this->program.link();
         this->program.bind();
-        this->camera.store(float(x), float(y), zoom);
-    }
 
-    void BatchRenderer::Queue::bind_textures() {
-        size_t begin = this->queue ? this->renderer.queues[queue - 1].tex_end : 0;
-        size_t end = this->renderer.queues[queue].tex_end;
-        std::vector<std::pair<unsigned int, unsigned int>> sizes;
-        for (int i = 0; begin + i < end; ++i) {
-            OpenGL::Texture& tex = *this->renderer.textures[begin + i];
-            tex.bind(i);
-            sizes.emplace_back(tex.width(), tex.height());
-        }
-        this->renderer.tex_sizes.store<2>(&sizes[0].first, sizes.size());
-    }
+        this->program.bind_uniform_block("camera_block", camera_uniform_binding);
+        this->canvas_size = this->program.get_uniform("canvas");
 
-    void BatchRenderer::Queue::render() {
-        size_t quad_begin = this->queue ? this->renderer.queues[queue - 1].quad_end : 0;
-        unsigned int size = this->renderer.queues[queue].quad_end - quad_begin;
-        assert(size <= BatchRenderer::max_quads);
-        assert(size * sizeof(Quad) <= 16 * (2 << 9));
-        this->renderer.ubo.store(this->renderer.quads.data() + quad_begin, size * sizeof(Quad));
-        this->renderer.program.draw(this->renderer.vao, OpenGL::Program::triangles, size * 6);
-    }
+        this->vao.create();
+        this->vao.attach_vbo(0, sizeof(Quad));
+        this->vao.vert_attr<int[2]>(0);
+        this->vao.vert_attr<int[2]>(1);
+        this->vao.vert_attr<int[2]>(2);
+        this->vao.vert_attr<unsigned int[1]>(3);
+        this->vao.vert_attr<unsigned int[1]>(4);
 
-    OpenGL::Shader get_shader(bool frag) {
-        std::string shader{frag ? Shaders::batch_render_frag : Shaders::batch_render_vert};
-        shader = shader.replace(shader.find("@"), 1, std::to_string(OpenGL::max_textures()));
-        return OpenGL::Shader{frag ? OpenGL::Shader::frag : OpenGL::Shader::vert, shader.c_str()};
-    }
-
-    BatchRenderer::BatchRenderer()
-        : max_textures(OpenGL::max_textures()),
-          program{get_shader(0), get_shader(1)},
-          screen_size(program.get_uniform("screen")),
-          tex_sizes(program.get_uniform("tex_wh")),
-          vao(0, sizeof(unsigned int[2])),
-          ubo(OpenGL::Buffer::uniform){
-        program.bind();
-        for (int i = 0; i < this->max_textures; ++i)
+        for (int i = 0; i < 16; ++i) //TODO REMOVE
             this->program.get_uniform(("tex[" + std::to_string(i) + "]").c_str()).store(i);
-        program.bind_uniform_buffer("quad_block", 0);
-        this->vao.bind();
-        this->fill_vao(BatchRenderer::max_quads);
+
+        glFrontFace(GL_CCW);
     }
 
     void BatchRenderer::push(const Vec2& pos, const Rect& coords, Texture& tex, unsigned int flags) {
-        unsigned int tex_id;
-        if (!this->texture_cache.contains(&tex)) {
-            tex_id = this->textures.size() - (this->queues.empty() ? 0 : this->queues.back().tex_end);
+        long id = -1;
+        for (size_t i = 0; i < textures.size(); ++i)
+            if (textures[i] == &tex)
+                id = i;
+        if (id == -1){
+            id = this->textures.size();
             this->textures.push_back(&tex);
-            this->texture_cache[&tex] = tex_id;
-        } else
-            tex_id = this->texture_cache[&tex];
-        this->push({pos, coords, tex_id, flags});
+        }
+
+        this->quads.emplace_back(pos, coords, this->textures.size(), flags);
     }
 
-    void BatchRenderer::push(Quad quad) {
-        this->quads.emplace_back(quad);
-        QueueIndices prev = this->queues.empty() ? QueueIndices{0, 0} : this->queues.back();
-        if (this->quads.size() - prev.quad_end >= BatchRenderer::max_quads ||
-            this->textures.size() - prev.tex_end >= this->max_textures)
-            this->new_queue();
-    }
+    void BatchRenderer::render(Canvas& canvas) {
+        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
+        this->canvas_size.store(canvas.x, canvas.y);
+        this->vao.get_vbo().store(this->quads.data(), this->quads.size()*sizeof(Quad));
 
-    void BatchRenderer::new_queue() {
-        if (this->quads.size() == (this->queues.empty() ? 0 : this->queues.back().quad_end))
-            return;
-        this->queues.emplace_back(this->quads.size(), this->textures.size());
-        this->texture_cache.clear();
-    }
+        for (size_t i = 0; i < this->textures.size(); ++i) //TODO REMOVE
+            this->textures[i]->bind(i);
 
-    void BatchRenderer::clean() {
-        this->queues.clear();
+        this->program.draw_patches(this->vao, this->quads.size(), 1);
         this->quads.clear();
         this->textures.clear();
-        this->texture_cache.clear();
     }
 
-    void BatchRenderer::render() {
-        this->program.bind();
-        this->vao.bind();
-        this->ubo.bind(0);
-        this->new_queue();
-
-        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
-
-        for (Queue queue : *this) {
-            queue.bind_textures();
-            queue.render();
-        }
-
-        this->clean();
-    }
-
-    void BatchRenderer::render(OpenGL::Framebuffer& fbo) {
-        fbo.bind();
-        this->render();
-        fbo.unbind();
-    }
-
-    void BatchRenderer::clear() {
+    void BatchRenderer::clear(Canvas& canvas) {
+        canvas.fbo.bind();
         OpenGL::Context::clear();
+        canvas.fbo.unbind();
     }
 
-    void BatchRenderer::clear(OpenGL::Framebuffer& fbo) {
-        fbo.bind();
-        this->clear();
-        fbo.unbind();
-    }
-
-    void BatchRenderer::fill_vao(size_t quad_count) {
-        struct Vertex {
-            unsigned int x, y;
-        };
-
-        typedef std::array<Vertex, 4> QuadVerts;
-        typedef std::array<unsigned int, 6> QuadIndices;
-
-        auto quads = std::make_unique<QuadVerts[]>(quad_count);
-        auto indices = std::make_unique<QuadIndices[]>(quad_count);
-
-        for (unsigned int i = 0; i < quad_count; ++i) {
-            quads[i] = {
-                Vertex{1, 1},
-                Vertex{1, 0},
-                Vertex{0, 0},
-                Vertex{0, 1},
-            };
-
-            unsigned int vertex = i * 4;
-            indices[i] = {vertex + 0, vertex + 1, vertex + 3, vertex + 1, vertex + 2, vertex + 3};
-        }
-
-        this->vao.get_vbo().store(quads.get(), sizeof(QuadVerts) * quad_count);
-        this->vao.get_ebo().store(&indices.get()[0][0], sizeof(QuadIndices) * quad_count);
-        this->vao.vert_attr<unsigned int[2]>(0);
-    }
-
-    void BatchRenderer::set_canvas(unsigned int x, unsigned int y) {
-        this->program.bind();
-        this->screen_size.store(x, y);
-        canvas.x = x;
-        canvas.y = y;
-    }
 }
