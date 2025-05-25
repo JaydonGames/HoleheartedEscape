@@ -90,7 +90,14 @@ namespace OpenGL {
     };
 
     struct Format {
-        enum Components { R, RG, RGB, RGBA, DEPTH, DEPTH_STENCIL };
+        enum Components {
+            R,
+            RG,
+            RGB,
+            RGBA,
+            DEPTH,
+            DEPTH_STENCIL
+        };
 
         enum Type {
             Typed,
@@ -131,7 +138,12 @@ namespace OpenGL {
 
     class Buffer : public Entity<Buffer> {
     public:
-        enum Type : unsigned int { vertex = 0x8892, index = 0x8893, shader = 0x90D2, uniform = 0x8A11 };
+        enum Type : unsigned int {
+            vertex = 0x8892,
+            index = 0x8893,
+            shader = 0x90D2,
+            uniform = 0x8A11
+        };
 
         Buffer() {}
         Buffer(Type type);
@@ -251,12 +263,32 @@ namespace OpenGL {
         enum Type : unsigned int {
             tex2d = 0x0DE1,
             tex3d = 0x806F,
+            texarr2d = 0x8C1A,
+        };
+
+        enum Wrap {
+            repeat = 0x2901,
+            mirrored_repeat = 0x8370,
+            clamp_border = 0x812D,
+            clamp_edge = 0x812F,
+        };
+
+        enum Filter {
+            nearest = 0x2600,
+            linear = 0x2601,
+            linear_mipmap_linear_pixel = 0x2703,
+            linear_mipmap_nearest_pixel = 0x2702,
+            nearest_mipmap_linear_pixel = 0x2701,
+            nearest_mipmap_nearest_pixel = 0x2700,
         };
 
         Texture() {}
         Texture(Type type);
-        Texture(Type type, const uint8_t data[], size_t length, Format fmt = format<8>(Format::RGBA));
+        Texture(Type type, const uint8_t data[], size_t length);
+        Texture(Type type, const uint8_t data[], size_t length, int level);
         Texture(Type type, unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
+        Texture(Type type, unsigned int width, unsigned int height, unsigned int depth,
+                Format fmt = format<8>(Format::RGBA));
         Texture(const Textures::asset_t& texture);
         Texture(Texture&&);
 
@@ -264,8 +296,18 @@ namespace OpenGL {
         void destroy();
 
         void bind(unsigned int index);
-        void store(const uint8_t data[], size_t length, Format fmt = format<8>(Format::RGBA));
+        void load(const uint8_t data[], size_t length); //Calls alloc
+        void load(const uint8_t data[], size_t length, int level); //Doesn't call alloc
+        void store(const uint8_t data[], int width, int height, int offset_x = 0, int offset_y = 0);
+        void store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y, int offset_z);
         void alloc(unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
+        void alloc(unsigned int width, unsigned int height, unsigned int depth, Format fmt = format<8>(Format::RGBA));
+
+        void set_wrap_x(Wrap);
+        void set_wrap_y(Wrap);
+        void set_mag_filter(Filter);
+        void set_min_filter(Filter);
+        void generate_minmap();
 
         inline unsigned int width() const {
             return this->w;
@@ -275,8 +317,13 @@ namespace OpenGL {
             return this->h;
         }
 
+        inline unsigned int depth() const {
+            return this->d;
+        }
+
     private:
-        int w, h;
+        int w, h, d;
+        Type type;
     };
 
     class Renderbuffer : public Entity<Renderbuffer> {
@@ -299,7 +346,7 @@ namespace OpenGL {
             DEPTH_STENCIL = 0x821A,
         };
 
-        Framebuffer(){};
+        Framebuffer() {};
 
         void create();
         void destroy();

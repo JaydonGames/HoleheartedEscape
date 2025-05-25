@@ -19,8 +19,7 @@ ObjectTest::ObjectTest(int x, int y, Tiled::Layer collision_layer) {
 void ObjectTest::do_layer_collision(std::string direction) {
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-            Tiled::Tile &tile = collision_layer.tiles[y][x];
-            if (tile.empty || y * 16 > m_rect.y)
+            if (!collision_layer.tiles[y][x].tile || y * 16 > m_rect.y)
                 continue;
             bool x_overlap = (x * 16 < m_rect.x + 16) && (x * 16 + 16 > m_rect.x);
             bool y_overlap = (y * 16 < m_rect.y + 16) && ((y * 16) + 16 > m_rect.y);

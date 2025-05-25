@@ -38,18 +38,23 @@ int main() {
     context.set_clear_color(0, 0, 0);
     context.enable_vsync();
 
-    OpenGL::Framebuffer& fbo = canvas.fbo;
+    OpenGL::Framebuffer &fbo = canvas.fbo;
     OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
     fbo.create();
     fbo.attach(0, color);
 
-    Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
-    Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
-    Tiled::Map test_map{Maps::test_map};
+    Render::TextureGroup textures;
+    size_t bg = textures.push_back(Textures::background);
+    size_t player_tex = textures.push_back(Textures::Crystal);
+    size_t object_tex = textures.push_back(Textures::objects);  
+    size_t main_tileset = textures.push_back(Textures::main_tileset);  
+    textures.finalize();
 
-    OpenGL::Texture bg{Textures::background};
-    OpenGL::Texture player_tex{Textures::Crystal};
-    OpenGL::Texture object_tex{Textures::objects};
+    Tiled::World world;
+    world.register_texture("main_tileset", main_tileset);
+    world.register_tileset("main_tileset", Tilesets::main_tileset);
+    Tiled::Map test_map{world, Maps::test_map};
+
 
     PhysicsWorld engine;
 
@@ -59,12 +64,11 @@ int main() {
     Square object{Render::Vector2D(80, 224), 16.0f};
     engine.add_square(&object);
 
-    Tiled::Layer collision_layer = test_map.layers[0];
+    Tiled::Layer collision_layer = test_map[0];
     std::deque<Square> collision_tiles;
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-            Tiled::Tile &tile = collision_layer.tiles[y][x];
-            if (tile.empty)
+            if (!collision_layer.tiles[y][x].tile)
                 continue;
             collision_tiles.emplace_back(Render::Vector2D(x * 16, y * 16), 16.0f, true);
             engine.add_square(&collision_tiles.back());
@@ -110,11 +114,11 @@ int main() {
         for (auto &layer : test_map.layers) {
             for (int y = 0; y < layer.tiles.size(); ++y) {
                 for (int x = 0; x < layer.tiles[y].size(); ++x) {
-                    Tiled::Tile &tile = layer.tiles[y][x];
-                    if (tile.empty)
+                    Tiled::Tile *tile = layer.tiles[y][x].tile;
+                    if (!tile)
                         continue;
-                    Render::Rect coords = tile.get_coords();
-                    renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
+                    renderer.push({x * tile->coords.w, y * tile->coords.h}, tile->coords, tile->tex,
+                                  layer.tiles[y][x].flags);
                 }
             }
         }
@@ -136,9 +140,10 @@ int main() {
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
+        /*
         camera.bind();
         renderer.clear(canvas);
-        renderer.render(canvas);
+        renderer.render(canvas, textures);
 
         screen_camera.bind();
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
@@ -146,7 +151,12 @@ int main() {
         renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
                       {0, 0, int(canvas.x), int(canvas.y)}, color);
         renderer.clear(screen);
-        renderer.render(screen);
+        renderer.render(screen, textures);
+        */
+
+        camera.bind();
+        renderer.clear(screen);
+        renderer.render(screen, textures);
 
         context.swap_buffer();
 

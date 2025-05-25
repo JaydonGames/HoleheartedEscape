@@ -450,9 +450,14 @@ namespace OpenGL {
         this->create(type);
     }
 
-    Texture::Texture(Type type, const uint8_t data[], size_t length, Format format) {
+    Texture::Texture(Type type, const uint8_t data[], size_t length) {
         this->create(type);
-        this->store(data, length, format);
+        this->load(data, length);
+    }
+
+    Texture::Texture(Type type, const uint8_t data[], size_t length, int level) {
+        this->create(type);
+        this->load(data, length, level);
     }
 
     Texture::Texture(Type type, unsigned int width, unsigned int height, Format format) {
@@ -471,6 +476,7 @@ namespace OpenGL {
 
     void Texture::create(Type type) {
         this->destroy();
+        this->type = type;
         glCreateTextures(type, 1, &this->id);
     }
 
@@ -482,40 +488,72 @@ namespace OpenGL {
 
     void Texture::bind(unsigned int index) {
         glActiveTexture(GL_TEXTURE0 + index);
-        glBindTexture(GL_TEXTURE_2D, this->id);
+        glBindTexture(this->type, this->id);
     }
 
-    void Texture::store(const uint8_t data[], size_t length, Format format) {
+    void Texture::load(const uint8_t data[], size_t length) {
         SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
         SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
-        glTextureParameteri(this->id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(this->id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(this->id, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-        glTextureParameteri(this->id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-        this->w = surface->w;
-        this->h = surface->h;
-        glTextureStorage2D(this->id, 1, format.to_opengl(), this->w, this->h);
-
-        for (size_t y = 0; y < this->h; ++y)
-            glTextureSubImage2D(this->id, 0, 0, y, surface->w, 1, GL_RGBA, GL_UNSIGNED_BYTE,
-                                (char *)surface->pixels + (this->h - 1 - y) * surface->pitch);
+        this->alloc(surface->w, surface->h);
+        this->store((uint8_t *)surface->pixels, surface->w, surface->h);
 
         SDL_FreeSurface(loaded_surface);
         SDL_FreeSurface(surface);
-        glGenerateTextureMipmap(this->id);
+    }
+
+    void Texture::load(const uint8_t data[], size_t length, int level) {
+        SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
+        SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+        this->store((uint8_t *)surface->pixels, surface->w, surface->h, 1, 0, 0, level);
+
+        SDL_FreeSurface(loaded_surface);
+        SDL_FreeSurface(surface);
+    }
+
+    void Texture::store(const uint8_t data[], int width, int height, int offset_x, int offset_y) {
+        glTextureSubImage2D(this->id, 0, offset_x, offset_y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    }
+
+    void Texture::store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y,
+                        int offset_z) {
+        glTextureSubImage3D(this->id, 0, offset_x, offset_y, offset_z, width, height, depth, GL_RGBA, GL_UNSIGNED_BYTE,
+                            data);
     }
 
     void Texture::alloc(unsigned int width, unsigned int height, Format format) {
         this->w = width;
         this->h = height;
-
+        this->d = 1;
         glTextureStorage2D(this->id, 1, format.to_opengl(), this->w, this->h);
-        glTextureParameteri(this->id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(this->id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(this->id, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTextureParameteri(this->id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    }
+
+    void Texture::alloc(unsigned int width, unsigned int height, unsigned int depth, Format format) {
+        this->w = width;
+        this->h = height;
+        this->d = depth;
+        glTextureStorage3D(this->id, 1, format.to_opengl(), this->w, this->h, this->d);
+    }
+
+    void Texture::set_wrap_x(Wrap wrap) {
+        glTextureParameteri(this->id, GL_TEXTURE_WRAP_S, wrap);
+    }
+
+    void Texture::set_wrap_y(Wrap wrap) {
+        glTextureParameteri(this->id, GL_TEXTURE_WRAP_T, wrap);
+    }
+
+    void Texture::set_mag_filter(Filter filter) {
+        glTextureParameteri(this->id, GL_TEXTURE_MAG_FILTER, filter);
+    }
+
+    void Texture::set_min_filter(Filter filter) {
+        glTextureParameteri(this->id, GL_TEXTURE_MIN_FILTER, filter);
+    }
+
+    void Texture::generate_minmap() {
+        glGenerateTextureMipmap(this->id);
     }
 
     Renderbuffer::Renderbuffer(const Format &format, int x, int y) {

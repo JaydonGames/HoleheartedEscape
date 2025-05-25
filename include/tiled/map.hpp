@@ -4,7 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "graphics/render.hpp"
+#include "graphics/types.hpp"
 #include "grid.hpp"
 
 namespace Tiled {
@@ -16,61 +16,56 @@ namespace Tiled {
         LeftUp
     };
 
+    struct Tile {
+        Render::Rect coords;
+        size_t tex;
+    };
 
-
-
-    class Tile {
-    public:
-        Tile(){}
-        bool empty = true;
-        Render::Rect get_coords();
-        OpenGL::Texture& get_texture();
-        unsigned int get_flags();
+    struct MapTile {
+        Tile* tile = nullptr;
+        unsigned int flags = 0;
 
     private:
-        friend class Map;
-        struct Data {
-            Render::Rect coords;
-            size_t texture;
-        };
-
-        Tile(uint32_t gid, const std::vector<std::pair<uint32_t, size_t>>& tileset_gids);
-        unsigned int render_flags = 0;
-        Data& get_data();
-        uint32_t tileset = 0;
-        uint32_t tile = 0;
+        friend struct Map;
+        static MapTile from_gid(uint32_t gid, std::vector<struct TilesetId>);
     };
 
     struct Layer {
+        const char* name;
         size_t width, height;
-        Grid<Tile> tiles;
-        std::string name;
+        Grid<MapTile> tiles;
     };
 
-    class Map {
-    public:
-        Map(const char* map);
+    struct Map {
+        Map(class World& world, const char* map);
 
         RenderOrder render_order;
         size_t width, height;
         size_t tile_width, tile_height;
         std::vector<Layer> layers;
 
-        static void register_tileset(const char* name, const char* tileset);
-        static void register_texture(const char* name, OpenGL::Texture&& texture);
+        Layer& operator[](std::string_view str);
+        Layer& operator[](size_t i);
+    };
+
+    struct Tileset {
+        Tileset() = default;
+        Tileset(World* world, const char* tileset);
+        std::vector<Tile> tiles;
+    };
+
+    class World {
+    public:
+        void register_texture(const char* name, size_t tex);
+        void register_tileset(const char* name, const char* tileset);
+        void register_tileset(const char* name, Tileset&& tileset);
+        void register_tileset(const char* name, const Tileset& tileset);
+        size_t get_texture(std::string_view name);
+        Tileset& get_tileset(std::string_view name);
 
     private:
-        friend class Tile;
-        static std::vector<Tile::Data>& get_tileset(size_t id);
-        static OpenGL::Texture& get_texture(size_t id);
-        static size_t get_tileset(const std::string name);
-        static size_t get_texture(const std::string name);
-        static std::vector<OpenGL::Texture> textures;
-        static std::vector<std::vector<Tile::Data>> tilesets;
-        static std::unordered_map<std::string, size_t> texture_names, tileset_names;
-
-        Grid<Tile> parse_csv_grid(size_t width, size_t height, const char* csv,
-                const std::vector<std::pair<uint32_t, size_t>>& tileset_gids);
+        std::unordered_map<std::string_view, size_t> textures;
+        std::unordered_map<std::string_view, Tileset> tilesets;
     };
 
 }

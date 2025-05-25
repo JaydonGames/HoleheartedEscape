@@ -1,5 +1,4 @@
 #pragma once
-#include <unordered_map>
 #include <vector>
 #include "opengl.hpp"
 #include "types.hpp"
@@ -29,11 +28,32 @@ namespace Render {
         FlipXY = FlipX | FlipY
     };
 
+    class TextureGroup {
+    public:
+        TextureGroup() = default;
+        TextureGroup(TextureGroup&&) = default;
+        TextureGroup(TextureGroup&);
+
+        size_t push_back(uint8_t data[], size_t size);
+        size_t push_back(Textures::asset_t& texture);
+        void bind(unsigned int);
+        void finalize();
+
+    private:
+        struct Texture {
+            uint8_t* data;
+            size_t size;
+        };
+
+        std::vector<Texture> textures;
+        OpenGL::Texture tex_arr;
+    };
+
     class BatchRenderer {
     public:
         BatchRenderer();
-        void push(const Vec2& pos, const Rect& tex_coords, Texture& tex, unsigned int flags = 0);
-        void render(Canvas& canvas);
+        void push(const Vec2& pos, const Rect& tex_coords, size_t tex, unsigned int flags = 0);
+        void render(Canvas& canvas, TextureGroup& textures);
         void clear(Canvas& canvas);
 
     private:
@@ -48,7 +68,6 @@ namespace Render {
         };
 
         std::vector<Quad> quads;
-        std::vector<Texture*> textures;
     };
 
 }
