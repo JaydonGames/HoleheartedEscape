@@ -1,4 +1,4 @@
-#version 410
+#version 430
 
 in vec2 tex_coords;
 flat in uint tex_id;

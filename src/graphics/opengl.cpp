@@ -6,6 +6,7 @@
 #include <SDL_surface.h>
 #include <SDL_video.h>
 #include <cassert>
+#include <iostream>
 
 namespace OpenGL {
 
@@ -24,8 +25,19 @@ namespace OpenGL {
     InitError::InitError(const unsigned char *what)
         : std::runtime_error(std::string(what, what + strlen(reinterpret_cast<const char *>(what)))) {}
 
+    void opengl_debug_out(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length,
+                          const char *message, const void *) {
+        if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+            return;
+        std::cout << "OpenGL message (" << id << "): " << message << std::endl;
+    }
+
+    bool Context::debug = false;
+
     Context::Context(SDL_Window *window, int major, int minor, bool core)
         : window(window) {
+        if (Context::debug)
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -37,6 +49,13 @@ namespace OpenGL {
         unsigned int err = glewInit();
         if (err)
             throw InitError{glewGetErrorString(err)};
+
+        if (Context::debug) {
+            glEnable(GL_DEBUG_OUTPUT);
+            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+            glDebugMessageCallback(opengl_debug_out, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        }
     }
 
     bool Context::enable_vsync() {
@@ -214,20 +233,19 @@ namespace OpenGL {
     }
 
     template<typename T>
-    void VertexArray::vert_attr(unsigned int index, unsigned int relative_offset, bool normalized) {
+    void VertexArray::vert_attr(unsigned int index, unsigned int offset, bool normalized) {
         constexpr int dimensions = std::extent_v<T>;
         using attr_t = std::remove_cvref_t<decltype(std::declval<T>()[0])>;
 
-        unsigned int type;
         if constexpr (std::is_same_v<attr_t, float>)
-            type = GL_FLOAT;
+            glVertexArrayAttribFormat(this->id, index, dimensions, GL_FLOAT, normalized, offset);
         if constexpr (std::is_same_v<attr_t, unsigned int>)
-            type = GL_UNSIGNED_INT;
+            glVertexArrayAttribIFormat(this->id, index, dimensions, GL_UNSIGNED_INT, offset);
         if constexpr (std::is_same_v<attr_t, int>)
-            type = GL_INT;
+            glVertexArrayAttribIFormat(this->id, index, dimensions, GL_INT, offset);
 
-        glVertexArrayAttribFormat(this->id, index, dimensions, type, normalized, relative_offset);
         glEnableVertexArrayAttrib(this->id, index);
+        glVertexArrayAttribBinding(this->id, index, 0);
     }
 
     template void VertexArray::vert_attr<float[1]>(unsigned int, unsigned int, bool);
@@ -421,7 +439,7 @@ namespace OpenGL {
         glDrawElements(GL_TRIANGLES, vert_count, GL_UNSIGNED_INT, nullptr);
     }
 
-    void Program::draw_patches(VertexArray& vao, int vert_count, int vert_per_patch){
+    void Program::draw_patches(VertexArray &vao, int vert_count, int vert_per_patch) {
         glPatchParameteri(GL_PATCH_VERTICES, vert_per_patch);
         this->bind();
         vao.bind();
@@ -451,7 +469,7 @@ namespace OpenGL {
         this->h = other.h;
     }
 
-    void Texture::create(Type type){
+    void Texture::create(Type type) {
         this->destroy();
         glCreateTextures(type, 1, &this->id);
     }
@@ -479,7 +497,10 @@ namespace OpenGL {
         this->w = surface->w;
         this->h = surface->h;
         glTextureStorage2D(this->id, 1, format.to_opengl(), this->w, this->h);
-        glTextureSubImage2D(this->id, 0, 0, 0, surface->w, surface->h, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
+
+        for (size_t y = 0; y < this->h; ++y)
+            glTextureSubImage2D(this->id, 0, 0, y, surface->w, 1, GL_RGBA, GL_UNSIGNED_BYTE,
+                                (char *)surface->pixels + (this->h - 1 - y) * surface->pitch);
 
         SDL_FreeSurface(loaded_surface);
         SDL_FreeSurface(surface);
@@ -497,7 +518,7 @@ namespace OpenGL {
         glTextureParameteri(this->id, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     }
 
-    Renderbuffer::Renderbuffer(const Format& format, int x, int y) {
+    Renderbuffer::Renderbuffer(const Format &format, int x, int y) {
         this->create();
         this->alloc(format, x, y);
     }

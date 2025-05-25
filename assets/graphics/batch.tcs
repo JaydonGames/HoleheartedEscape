@@ -6,17 +6,17 @@ in ivec2 vert_tex_wh[];
 in uint vert_tex[];
 in uint vert_flags[];
 
-out ivec2 tex_xy[];
-out ivec2 tex_wh[];
-out uint tex[];
-out uint flags[];
+patch out ivec2 tex_xy;
+patch out ivec2 tex_wh;
+patch out uint tex;
+patch out uint flags;
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-    tex_xy[0] = vert_tex_xy[0];
-    tex_wh[0] = vert_tex_wh[0];
-    tex[0] = vert_tex[0];
-    flags[0] = vert_flags[0];
+    tex_xy = vert_tex_xy[0];
+    tex_wh = vert_tex_wh[0];
+    tex = vert_tex[0];
+    flags = vert_flags[0];
 
     gl_TessLevelOuter[0] = 1;
     gl_TessLevelOuter[1] = 1;

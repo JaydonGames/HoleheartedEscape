@@ -29,6 +29,7 @@ int main() {
     SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, start_size.x,
                                           start_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
+    OpenGL::Context::debug = true;
     OpenGL::Context context{window};
     Render::BatchRenderer renderer;
     Render::Camera screen_camera, camera;
@@ -143,7 +144,7 @@ int main() {
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
         screen_camera.set(screen.x / 2, screen.y / 2, zoom);
         renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
-                      {0, 0, int(canvas.x), int(canvas.y)}, color, Render::FlipY);
+                      {0, 0, int(canvas.x), int(canvas.y)}, color);
         renderer.clear(screen);
         renderer.render(screen);
 

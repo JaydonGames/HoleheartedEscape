@@ -25,6 +25,6 @@ void main(){
 
     gl_Position = vec4(pos, 0, 1);
     tex_id = tex;
-    tex_coords = vert;
+    tex_coords = vec2(vert.x, 1-vert.y);
     //tex_coords = vec2(quad.tex_xy)/tex_wh[tex_id] + tex_axis*vec2(quad.tex_wh)/tex_wh[tex_id];
 }

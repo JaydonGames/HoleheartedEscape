@@ -39,6 +39,8 @@ namespace OpenGL {
         static void sync();
         void swap_buffer();
 
+        static bool debug;
+
     private:
         void* context;
         SDL_Window* window;
@@ -166,7 +168,7 @@ namespace OpenGL {
         Buffer& get_vbo();
         Buffer& get_ebo();
         template<typename T>
-        void vert_attr(unsigned int index, unsigned int relative_offset = 0, bool normalized = false);
+        void vert_attr(unsigned int index, unsigned int offset, bool normalized = false);
 
     private:
         Buffer vbo, ebo;

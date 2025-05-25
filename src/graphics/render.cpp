@@ -1,13 +1,7 @@
-#include <array>
 #include <cassert>
-#include <cmath>
-#include <memory>
 #include <string>
 #include "graphics/render.hpp"
 #include "assets.hpp"
-
-// TODO REMOVE
-#include <GL/glew.h>
 
 namespace Render {
     inline constexpr unsigned int camera_uniform_binding = 10;
@@ -46,16 +40,14 @@ namespace Render {
 
         this->vao.create();
         this->vao.attach_vbo(0, sizeof(Quad));
-        this->vao.vert_attr<int[2]>(0);
-        this->vao.vert_attr<int[2]>(1);
-        this->vao.vert_attr<int[2]>(2);
-        this->vao.vert_attr<unsigned int[1]>(3);
-        this->vao.vert_attr<unsigned int[1]>(4);
+        this->vao.vert_attr<int[2]>(0, offsetof(Quad, pos));
+        this->vao.vert_attr<int[2]>(1, offsetof(Quad, tex_coords));
+        this->vao.vert_attr<int[2]>(2, offsetof(Quad, tex_coords) + offsetof(Rect, w));
+        this->vao.vert_attr<unsigned int[1]>(3, offsetof(Quad, tex));
+        this->vao.vert_attr<unsigned int[1]>(4, offsetof(Quad, flags));
 
-        for (int i = 0; i < 16; ++i) //TODO REMOVE
+        for (int i = 0; i < 16; ++i)
             this->program.get_uniform(("tex[" + std::to_string(i) + "]").c_str()).store(i);
-
-        glFrontFace(GL_CCW);
     }
 
     void BatchRenderer::push(const Vec2& pos, const Rect& coords, Texture& tex, unsigned int flags) {
@@ -63,23 +55,25 @@ namespace Render {
         for (size_t i = 0; i < textures.size(); ++i)
             if (textures[i] == &tex)
                 id = i;
-        if (id == -1){
+        if (id == -1) {
             id = this->textures.size();
             this->textures.push_back(&tex);
         }
 
-        this->quads.emplace_back(pos, coords, this->textures.size(), flags);
+        this->quads.emplace_back(pos, coords, id, flags);
     }
 
     void BatchRenderer::render(Canvas& canvas) {
         OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
         this->canvas_size.store(canvas.x, canvas.y);
-        this->vao.get_vbo().store(this->quads.data(), this->quads.size()*sizeof(Quad));
+        this->vao.get_vbo().store(this->quads.data(), this->quads.size() * sizeof(Quad));
 
-        for (size_t i = 0; i < this->textures.size(); ++i) //TODO REMOVE
+        for (size_t i = 0; i < this->textures.size(); ++i)
             this->textures[i]->bind(i);
 
+        canvas.fbo.bind();
         this->program.draw_patches(this->vao, this->quads.size(), 1);
+        canvas.fbo.unbind();
         this->quads.clear();
         this->textures.clear();
     }
