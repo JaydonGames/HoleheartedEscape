@@ -416,7 +416,7 @@ namespace OpenGL {
         glLinkProgram(this->id);
     }
 
-    void Program::bind() {
+    void Program::use() {
         glUseProgram(this->id);
     }
 
@@ -429,19 +429,19 @@ namespace OpenGL {
     }
 
     void Program::compute(unsigned int x, unsigned int y, unsigned int z) {
-        this->bind();
+        this->use();
         glDispatchCompute(x, y, z);
     }
 
     void Program::draw_tri(VertexArray &vao, int vert_count) {
-        this->bind();
+        this->use();
         vao.bind();
         glDrawElements(GL_TRIANGLES, vert_count, GL_UNSIGNED_INT, nullptr);
     }
 
     void Program::draw_patches(VertexArray &vao, int vert_count, int vert_per_patch) {
         glPatchParameteri(GL_PATCH_VERTICES, vert_per_patch);
-        this->bind();
+        this->use();
         vao.bind();
         glDrawArrays(GL_PATCHES, 0, vert_count);
     }
@@ -491,22 +491,32 @@ namespace OpenGL {
         glBindTexture(this->type, this->id);
     }
 
-    void Texture::load(const uint8_t data[], size_t length) {
+    void Texture::load(const uint8_t data[], size_t length, bool flip_y) {
         SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
         SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
         this->alloc(surface->w, surface->h);
-        this->store((uint8_t *)surface->pixels, surface->w, surface->h);
+
+        if (!flip_y)
+            for (size_t y = 0; y < this->h; ++y)
+                this->store((uint8_t *)surface->pixels + (this->h - 1 - y) * surface->pitch, surface->w, 1, 0, y);
+        else
+            this->store((uint8_t *)surface->pixels, surface->w, surface->h);
 
         SDL_FreeSurface(loaded_surface);
         SDL_FreeSurface(surface);
     }
 
-    void Texture::load(const uint8_t data[], size_t length, int level) {
+    void Texture::load(const uint8_t data[], size_t length, int level, bool flip_y) {
         SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
         SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
 
-        this->store((uint8_t *)surface->pixels, surface->w, surface->h, 1, 0, 0, level);
+        if (!flip_y)
+            for (size_t y = 0; y < this->h; ++y)
+                this->store((uint8_t *)surface->pixels + (this->h - 1 - y) * surface->pitch, surface->w, 1, 1, 0, y,
+                            level);
+        else
+            this->store((uint8_t *)surface->pixels, surface->w, surface->h, 1, 0, 0, level);
 
         SDL_FreeSurface(loaded_surface);
         SDL_FreeSurface(surface);

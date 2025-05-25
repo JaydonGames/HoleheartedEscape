@@ -245,7 +245,7 @@ namespace OpenGL {
 
         void create();
         void destroy();
-        void bind();
+        void use();
 
         void attach(const Shader&);
         void link();
@@ -296,8 +296,8 @@ namespace OpenGL {
         void destroy();
 
         void bind(unsigned int index);
-        void load(const uint8_t data[], size_t length); //Calls alloc
-        void load(const uint8_t data[], size_t length, int level); //Doesn't call alloc
+        void load(const uint8_t data[], size_t length, bool flip_y = false);
+        void load(const uint8_t data[], size_t length, int level, bool flip_y);
         void store(const uint8_t data[], int width, int height, int offset_x = 0, int offset_y = 0);
         void store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y, int offset_z);
         void alloc(unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));

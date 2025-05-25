@@ -20,7 +20,7 @@ namespace Render {
         ubo.store(&data, sizeof(data));
     }
 
-    void Camera::bind() {
+    void Camera::use() {
         ubo.bind(camera_uniform_binding);
     }
 
@@ -35,18 +35,18 @@ namespace Render {
         return textures.size() - 1;
     }
 
-    size_t TextureGroup::push_back(Textures::asset_t& texture){
+    size_t TextureGroup::push_back(Textures::asset_t& texture) {
         return this->push_back(texture.data, texture.length);
     }
 
-    void TextureGroup::bind(unsigned int binding){
+    void TextureGroup::bind(unsigned int binding) {
         this->tex_arr.bind(binding);
     }
 
-    void TextureGroup::finalize(){
+    void TextureGroup::finalize() {
         int width = 0, height = 0;
-        for (size_t i = 0; i < this->textures.size(); ++i){
-            SDL_Surface *surface = IMG_Load_RW(SDL_RWFromConstMem(textures[i].data, textures[i].size), true);
+        for (size_t i = 0; i < this->textures.size(); ++i) {
+            SDL_Surface* surface = IMG_Load_RW(SDL_RWFromConstMem(textures[i].data, textures[i].size), true);
             width = std::max(width, surface->w);
             height = std::max(width, surface->h);
             SDL_FreeSurface(surface);
@@ -56,7 +56,7 @@ namespace Render {
         tex_arr.alloc(width, height, this->textures.size());
 
         for (size_t i = 0; i < this->textures.size(); ++i)
-            tex_arr.load(textures[i].data, textures[i].size, i);
+            tex_arr.load(textures[i].data, textures[i].size, i, true);
 
         tex_arr.set_wrap_x(OpenGL::Texture::repeat);
         tex_arr.set_wrap_y(OpenGL::Texture::repeat);
@@ -75,7 +75,6 @@ namespace Render {
         this->program.attach(tcs);
         this->program.attach(tes);
         this->program.link();
-        this->program.bind();
 
         this->program.bind_uniform_block("camera_block", camera_uniform_binding);
         this->canvas_size = this->program.get_uniform("canvas");
@@ -95,6 +94,7 @@ namespace Render {
 
     void BatchRenderer::render(Canvas& canvas, TextureGroup& textures) {
         OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
+        this->program.use();
         this->canvas_size.store(canvas.x, canvas.y);
         this->vao.get_vbo().store(this->quads.data(), this->quads.size() * sizeof(Quad));
 
@@ -111,4 +111,55 @@ namespace Render {
         canvas.fbo.unbind();
     }
 
+    SimpleRenderer::SimpleRenderer() {
+        OpenGL::Shader vert{OpenGL::Shader::vert, Shaders::simple_vert};
+        OpenGL::Shader frag{OpenGL::Shader::frag, Shaders::simple_frag};
+        this->program.create();
+        this->program.attach(vert);
+        this->program.attach(frag);
+        this->program.link();
+
+        this->program.bind_uniform_block("camera_block", camera_uniform_binding);
+        this->canvas_size = this->program.get_uniform("canvas");
+        this->coords_uniform = this->program.get_uniform("coords");
+        this->pos_uniform = this->program.get_uniform("position");
+        this->flags_uniform = this->program.get_uniform("flags");
+
+        this->vao.create();
+        this->vao.attach_ebo();
+        this->vao.attach_vbo(0, sizeof(float[2]));
+        this->vao.vert_attr<float[2]>(0, 0);
+
+        float vertices[] = {
+            0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+        };
+
+        unsigned int indices[] = {
+            0, 1, 2, 0, 3, 2,
+        };
+
+        this->vao.get_vbo().store(vertices, sizeof(vertices), false);
+        this->vao.get_ebo().store(indices, sizeof(indices), false);
+    }
+
+    void SimpleRenderer::render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex, unsigned int flags){
+        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
+        this->program.use();
+        this->canvas_size.store(canvas.x, canvas.y);
+        this->coords_uniform.store(tex_coords.x, tex_coords.y, tex_coords.w, tex_coords.h);
+        this->pos_uniform.store(pos.x, pos.y);
+        this->flags_uniform.store(flags);
+
+        tex.bind(0);
+        canvas.fbo.bind();
+        this->program.draw_tri(this->vao, 6);
+        canvas.fbo.unbind();
+    }
+    
+    void SimpleRenderer::clear(Canvas& canvas) {
+        canvas.fbo.bind();
+        OpenGL::Context::clear();
+        canvas.fbo.unbind();
+    }
+ 
 }

@@ -32,6 +32,7 @@ int main() {
     OpenGL::Context::debug = true;
     OpenGL::Context context{window};
     Render::BatchRenderer renderer;
+    Render::SimpleRenderer fbo_renderer;
     Render::Camera screen_camera, camera;
     Render::Canvas canvas{SCREEN_WIDTH, SCREEN_HEIGHT}, screen{start_size.x, start_size.y};
     camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
@@ -46,15 +47,14 @@ int main() {
     Render::TextureGroup textures;
     size_t bg = textures.push_back(Textures::background);
     size_t player_tex = textures.push_back(Textures::Crystal);
-    size_t object_tex = textures.push_back(Textures::objects);  
-    size_t main_tileset = textures.push_back(Textures::main_tileset);  
+    size_t object_tex = textures.push_back(Textures::objects);
+    size_t main_tileset = textures.push_back(Textures::main_tileset);
     textures.finalize();
 
     Tiled::World world;
     world.register_texture("main_tileset", main_tileset);
     world.register_tileset("main_tileset", Tilesets::main_tileset);
     Tiled::Map test_map{world, Maps::test_map};
-
 
     PhysicsWorld engine;
 
@@ -140,24 +140,17 @@ int main() {
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
         // Rendering
-        /*
-        camera.bind();
+        camera.use();
         renderer.clear(canvas);
         renderer.render(canvas, textures);
 
-        screen_camera.bind();
+        screen_camera.use();
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
+        int offset_x = (screen.x * zoom - canvas.x) / 2, offset_y = (screen.y * zoom - canvas.y) / 2;
         screen_camera.set(screen.x / 2, screen.y / 2, zoom);
-        renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
-                      {0, 0, int(canvas.x), int(canvas.y)}, color);
-        renderer.clear(screen);
-        renderer.render(screen, textures);
-        */
 
-        camera.bind();
-        renderer.clear(screen);
-        renderer.render(screen, textures);
-
+        fbo_renderer.clear(screen);
+        fbo_renderer.render(screen, {offset_x, offset_y}, {0, 0, int(canvas.x), int(canvas.y)}, color);
         context.swap_buffer();
 
         ++frame_count;

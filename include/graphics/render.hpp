@@ -11,7 +11,7 @@ namespace Render {
         Camera();
         void set(int x, int y);
         void set(int x, int y, float zoom);
-        void bind();
+        void use();
         OpenGL::Buffer ubo;
     };
 
@@ -68,6 +68,19 @@ namespace Render {
         };
 
         std::vector<Quad> quads;
+    };
+
+    class SimpleRenderer {
+    public:
+        SimpleRenderer();
+        void render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex,
+                    unsigned int flags = 0);
+        void clear(Canvas& canvas);
+
+    private:
+        OpenGL::Program program;
+        OpenGL::Uniform canvas_size, coords_uniform, pos_uniform, flags_uniform;
+        OpenGL::VertexArray vao;
     };
 
 }
