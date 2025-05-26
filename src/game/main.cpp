@@ -143,7 +143,7 @@ int main() {
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
         // Light
-        const Uint8* keystate = SDL_GetKeyboardState(NULL);
+        const uint8_t* keystate = SDL_GetKeyboardState(NULL);
         if (keystate[SDL_SCANCODE_W])
             --light.y;
         if (keystate[SDL_SCANCODE_S])

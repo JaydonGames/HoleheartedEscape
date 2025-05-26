@@ -9,10 +9,15 @@ namespace Render {
     class Camera {
     public:
         Camera();
-        void set(int x, int y);
+        Camera(const Camera&);
+        Camera& operator=(const Camera&);
         void set(int x, int y, float zoom);
         void use();
+
         OpenGL::Buffer ubo;
+
+    private:
+        struct Internal;
     };
 
     class Canvas {

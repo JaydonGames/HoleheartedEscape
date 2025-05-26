@@ -199,6 +199,10 @@ namespace OpenGL {
         glMemoryBarrier(bit);
     }
 
+    void Buffer::get_data(void *data, size_t size, ptrdiff_t offset) const {
+        glGetNamedBufferSubData(this->id, offset, size, data);
+    }
+
     void *Buffer::map(bool writeable) {
         return glMapNamedBuffer(this->id, writeable ? GL_READ_WRITE : GL_READ_ONLY);
     }

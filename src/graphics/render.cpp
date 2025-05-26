@@ -8,15 +8,29 @@
 namespace Render {
     inline constexpr unsigned int camera_uniform_binding = 10;
 
+    struct Camera::Internal {
+        int x, y;
+        float zoom;
+    };
+
     Camera::Camera() {
         ubo.create(OpenGL::Buffer::uniform);
     }
 
+    Camera::Camera(const Camera& other) {
+        *this = other;
+    }
+
+    Camera& Camera::operator=(const Camera& other){
+        Internal data;
+        ubo.create(OpenGL::Buffer::uniform);
+        other.ubo.get_data(&data, sizeof(data));
+        ubo.store(&data, sizeof(data));
+        return *this;
+    }
+
     void Camera::set(int x, int y, float zoom) {
-        struct {
-            int x, y;
-            float zoom;
-        } data{x, y, zoom};
+        Internal data{x, y, zoom};
         ubo.store(&data, sizeof(data));
     }
 
@@ -139,7 +153,7 @@ namespace Render {
         this->quads.emplace_back(pos, coords, tex, flags);
     }
 
-    void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity){
+    void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity) {
         this->lights.emplace_back(pos, radius, intensity, color);
     }
 
@@ -166,7 +180,7 @@ namespace Render {
         this->program.draw_patches(this->vao, this->quads.size(), 1);
 
         canvas.internal_color.bind(0);
-        for (Light& light : this->lights){
+        for (Light& light : this->lights) {
             this->light_uniform.store(&light, sizeof(light));
 
             canvas.internal_fbo.bind();
@@ -218,7 +232,8 @@ namespace Render {
         this->vao.get_ebo().store(indices, sizeof(indices), false);
     }
 
-    void SimpleRenderer::render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex, unsigned int flags){
+    void SimpleRenderer::render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex,
+                                unsigned int flags) {
         this->program.use();
         OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
         this->canvas_size.store(canvas.x, canvas.y);
@@ -231,11 +246,11 @@ namespace Render {
         this->program.draw_tri(this->vao, 6);
         canvas.fbo.unbind();
     }
-    
+
     void SimpleRenderer::clear(Canvas& canvas) {
         canvas.fbo.bind();
         OpenGL::Context::clear();
         canvas.fbo.unbind();
     }
- 
+
 }

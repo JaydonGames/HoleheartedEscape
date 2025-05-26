@@ -160,6 +160,8 @@ namespace OpenGL {
         void alloc(size_t size);
 
         void sync();
+
+        void get_data(void* data, size_t size, ptrdiff_t offset = 0) const;
         void* map(bool writeable = true);
         void unmap();
 
