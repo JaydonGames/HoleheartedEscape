@@ -58,6 +58,22 @@ namespace OpenGL {
         }
     }
 
+    void Context::wireframe(bool enable) {
+        if (enable) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glLineWidth(5.0f);
+        } else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    void Context::blending(bool enable) {
+        if (enable) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        } else
+            glDisable(GL_BLEND);
+    }
+
     bool Context::enable_vsync() {
         return SDL_GL_SetSwapInterval(1) >= 0;
     }

@@ -30,6 +30,8 @@ namespace OpenGL {
         Context(SDL_Window* window, int major = 4, int minor = 5, bool core = true);
         void bind();
 
+        static void wireframe(bool enable);
+        static void blending(bool enable);
         /* Returns false if vsync isn't supported */
         static bool enable_vsync();
         /* Needs to be ran when the window resizes. */

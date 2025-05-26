@@ -1,5 +1,5 @@
 #version 430
-layout (quads, equal_spacing) in;
+layout(quads, equal_spacing) in;
 
 #define FLIP_DIAG (1<<0)
 #define FLIP_X (1<<1)
@@ -13,18 +13,20 @@ patch in uint flags;
 flat out uint tex_id;
 out vec2 tex_coords;
 
-uniform uvec2 canvas;
 uniform sampler2DArray tex_array;
-layout (std140) uniform camera_block {
+layout(std140) uniform camera_block {
     ivec2 camera;
     float zoom;
 };
+layout(std140) uniform canvas_block {
+    uvec2 canvas;
+};
 
-void main(){
+void main() {
     vec2 vert = gl_TessCoord.xy;
     vec2 pos = gl_in[0].gl_Position.xy;
-    pos += vert*tex_wh - camera*zoom + (canvas*zoom)/2;
-    pos *= 2.0/(canvas*zoom);
+    pos += vert * tex_wh - camera * zoom + (canvas * zoom) / 2;
+    pos *= 2.0 / (canvas * zoom);
     pos -= 1;
     pos.y *= -1;
     gl_Position = vec4(pos, 0, 1);
@@ -39,5 +41,5 @@ void main(){
         tex_axis = tex_axis.yx;
 
     tex_id = tex;
-    tex_coords = tex_xy/tex_size + tex_axis*tex_wh/tex_size;
+    tex_coords = tex_xy / tex_size + tex_axis * tex_wh / tex_size;
 }

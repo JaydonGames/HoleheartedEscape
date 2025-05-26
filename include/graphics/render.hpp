@@ -19,13 +19,26 @@ namespace Render {
     public:
         unsigned int x, y;
         OpenGL::Framebuffer fbo;
+
+        Canvas() {}
+        Canvas(unsigned int x, unsigned int y)
+            : x(x),
+              y(y) {}
+
+    private:
+        OpenGL::Framebuffer internal_fbo;
+        OpenGL::Texture internal_color;
+        OpenGL::Renderbuffer internal_rbo;
+        friend class BatchRenderer;
     };
 
     enum Flags {
         FlipDiag = 1 << 0,
         FlipX = 1 << 1,
         FlipY = 1 << 2,
-        FlipXY = FlipX | FlipY
+        FlipXY = FlipX | FlipY,
+        NoShadows = 1 << 3,
+        NoSelfShadows = 1 << 4,
     };
 
     class TextureGroup {
@@ -53,13 +66,14 @@ namespace Render {
     public:
         BatchRenderer();
         void push(const Vec2& pos, const Rect& tex_coords, size_t tex, unsigned int flags = 0);
+        void push(const Vec2& pos, const Color& color, unsigned int radius, float intensity);
         void render(Canvas& canvas, TextureGroup& textures);
         void clear(Canvas& canvas);
 
     private:
-        OpenGL::Program program;
-        OpenGL::Uniform canvas_size;
-        OpenGL::VertexArray vao;
+        OpenGL::Program program, shadow_program, light_program;
+        OpenGL::Buffer canvas_uniform, light_uniform;
+        OpenGL::VertexArray vao, light_vao;
 
         struct Quad {
             Vec2 pos;
@@ -67,7 +81,15 @@ namespace Render {
             unsigned int tex, flags;
         };
 
+        struct Light {
+            Vec2 pos;
+            unsigned int radius;
+            float intensity;
+            Color color;
+        };
+
         std::vector<Quad> quads;
+        std::vector<Light> lights;
     };
 
     class SimpleRenderer {

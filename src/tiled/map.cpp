@@ -146,12 +146,12 @@ namespace Tiled {
     }
 
     size_t World::get_texture(std::string_view name) {
-        std::string name_no_ext = fs::path{name}.stem();
+        std::string name_no_ext = fs::path{name}.stem().string();
         return textures[name_no_ext];
     }
 
     Tileset& World::get_tileset(std::string_view name) {
-        std::string name_no_ext = fs::path{name}.stem();
+        std::string name_no_ext = fs::path{name}.stem().string();
         return tilesets[name_no_ext];
     }
 

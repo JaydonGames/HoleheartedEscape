@@ -41,8 +41,11 @@ int main() {
 
     OpenGL::Framebuffer &fbo = canvas.fbo;
     OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
+    OpenGL::Texture object_opengl_tex{OpenGL::Texture::tex2d, Textures::objects.data, Textures::objects.length};
     fbo.create();
     fbo.attach(0, color);
+
+    Render::Vec2 light{int(0.25*canvas.x/2), int(0.25*canvas.y/2)};
 
     Render::TextureGroup textures;
     size_t bg = textures.push_back(Textures::background);
@@ -110,7 +113,7 @@ int main() {
         // Updating
         engine.update(dt);
 
-        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
+        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, Render::NoSelfShadows);
         for (auto &layer : test_map.layers) {
             for (int y = 0; y < layer.tiles.size(); ++y) {
                 for (int x = 0; x < layer.tiles[y].size(); ++x) {
@@ -139,6 +142,19 @@ int main() {
         Render::Vector2D object_curr_position = object.get_curr_position();
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
+        // Light
+        const Uint8* keystate = SDL_GetKeyboardState(NULL);
+        if (keystate[SDL_SCANCODE_W])
+            --light.y;
+        if (keystate[SDL_SCANCODE_S])
+            ++light.y;
+        if (keystate[SDL_SCANCODE_A])
+            --light.x;
+        if (keystate[SDL_SCANCODE_D])
+            ++light.x;
+
+        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.3f);
+        
         // Rendering
         camera.use();
         renderer.clear(canvas);

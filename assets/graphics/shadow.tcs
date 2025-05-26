@@ -1,0 +1,47 @@
+#version 430
+layout(vertices = 1) out;
+
+#define NO_SHADOW (1<<3)
+#define NO_SELF_SHADOWS (1<<4)
+
+in ivec2 vert_tex_wh[];
+in uint vert_flags[];
+patch out vec2 wh;
+patch out uint flags_in;
+
+layout(std140) uniform camera_block {
+    ivec2 camera;
+    float zoom;
+};
+
+layout(std140) uniform canvas_block {
+    uvec2 canvas;
+};
+
+vec4 world_to_screen(vec2 pos) {
+    pos += (canvas * zoom) / 2 - camera * zoom;
+    pos *= 2.0 / (canvas * zoom);
+    pos -= 1;
+    pos.y *= -1;
+    return vec4(pos, 0, 1);
+}
+
+void main() {
+    vec2 pos = gl_in[gl_InvocationID].gl_Position.xy;
+    gl_out[gl_InvocationID].gl_Position = world_to_screen(pos);
+    wh = world_to_screen(pos + vert_tex_wh[0]).xy - gl_out[gl_InvocationID].gl_Position.xy;
+    flags_in = vert_flags[0];
+
+    if (bool(flags_in & uint(NO_SELF_SHADOWS))) {
+        gl_TessLevelOuter[0] = 0;
+        gl_TessLevelOuter[1] = 0;
+        gl_TessLevelOuter[2] = 0;
+        gl_TessLevelInner[0] = 0;
+    }
+    else {
+        gl_TessLevelOuter[0] = 2;
+        gl_TessLevelOuter[1] = 2;
+        gl_TessLevelOuter[2] = 2;
+        gl_TessLevelInner[0] = 1;
+    }
+}

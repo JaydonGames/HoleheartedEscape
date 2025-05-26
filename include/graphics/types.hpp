@@ -49,8 +49,8 @@ namespace Render {
             }
     };
 
-    struct Vec3 {
-            int x, y, z;
+    struct Color {
+            float r, g, b;
     };
 
     struct Vec4 {

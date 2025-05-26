@@ -1,0 +1,67 @@
+#version 430
+layout(triangles, equal_spacing) in;
+
+patch in vec2 wh;
+patch in uint flags_in;
+flat out uint flags;
+
+layout(std140) uniform camera_block {
+    ivec2 camera;
+    float zoom;
+};
+
+layout(std140) uniform canvas_block {
+    uvec2 canvas;
+};
+
+layout(std140) uniform light_block {
+    ivec2 pos;
+    float radius;
+    uint intensity;
+    vec3 color;
+} light;
+
+vec2 world_to_screen(vec2 pos) {
+    pos += (canvas * zoom) / 2 - camera * zoom;
+    pos *= 2.0 / (canvas * zoom);
+    pos -= 1;
+    pos.y *= -1;
+    return pos;
+}
+
+vec2 flip(vec2 vert, vec2 axis) {
+    return axis * (1 - vert) + (1 - axis) * vert;
+}
+
+vec2 flipx(vec2 vert) {
+    return vec2(1 - vert.x, vert.y);
+}
+
+vec2 flipy(vec2 vert) {
+    return vec2(vert.x, 1 - vert.y);
+}
+
+vec2 flipxy(vec2 vert) {
+    return 1 - vert;
+}
+
+void set_pos(vec2 vert) {
+}
+
+void main() {
+    // TODO: Handle when light is facing an edge
+    vec3 vert = ivec3(gl_TessCoord.xyz + 0.5);
+    vec2 light_pos = world_to_screen(light.pos);
+    vec2 quad_pos = gl_in[0].gl_Position.xy;
+    vec2 closest_vert = vec2((quad_pos.x+wh.x)/2 <= light_pos.x, (quad_pos.y+wh.y)/2 <= light_pos.y);
+    vec2 corner_pos = quad_pos + wh * flipx(flip(vert.xy, closest_vert));
+
+    if (vert.z == 0)
+        gl_Position = vec4(corner_pos, 0, 1);
+    else {
+        vec2 line = corner_pos - light_pos;
+        gl_Position = vec4(normalize(line)*4 + light_pos, 0, 1);
+    }
+
+    flags = flags_in;
+}

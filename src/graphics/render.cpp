@@ -65,19 +65,48 @@ namespace Render {
     }
 
     BatchRenderer::BatchRenderer() {
-        OpenGL::Shader vert{OpenGL::Shader::vert, Shaders::batch_vert};
-        OpenGL::Shader frag{OpenGL::Shader::frag, Shaders::batch_frag};
-        OpenGL::Shader tcs{OpenGL::Shader::tcs, Shaders::batch_tcs};
-        OpenGL::Shader tes{OpenGL::Shader::tes, Shaders::batch_tes};
+        OpenGL::Shader quad_vert{OpenGL::Shader::vert, Shaders::batch_vert};
+        OpenGL::Shader quad_tcs{OpenGL::Shader::tcs, Shaders::batch_tcs};
+        OpenGL::Shader quad_tes{OpenGL::Shader::tes, Shaders::batch_tes};
+        OpenGL::Shader quad_frag{OpenGL::Shader::frag, Shaders::batch_frag};
+
+        OpenGL::Shader shadow_tcs{OpenGL::Shader::tcs, Shaders::shadow_tcs};
+        OpenGL::Shader shadow_tes{OpenGL::Shader::tes, Shaders::shadow_tes};
+        OpenGL::Shader shadow_frag{OpenGL::Shader::frag, Shaders::shadow_frag};
+
+        OpenGL::Shader light_vert{OpenGL::Shader::vert, Shaders::light_vert};
+        OpenGL::Shader light_frag{OpenGL::Shader::frag, Shaders::light_frag};
+
         this->program.create();
-        this->program.attach(vert);
-        this->program.attach(frag);
-        this->program.attach(tcs);
-        this->program.attach(tes);
+        this->program.attach(quad_vert);
+        this->program.attach(quad_tcs);
+        this->program.attach(quad_tes);
+        this->program.attach(quad_frag);
         this->program.link();
 
+        this->shadow_program.create();
+        this->shadow_program.attach(quad_vert);
+        this->shadow_program.attach(shadow_tcs);
+        this->shadow_program.attach(shadow_tes);
+        this->shadow_program.attach(shadow_frag);
+        this->shadow_program.link();
+
+        this->light_program.create();
+        this->light_program.attach(light_vert);
+        this->light_program.attach(light_frag);
+        this->light_program.link();
+
         this->program.bind_uniform_block("camera_block", camera_uniform_binding);
-        this->canvas_size = this->program.get_uniform("canvas");
+        this->program.bind_uniform_block("canvas_block", 0);
+        this->shadow_program.bind_uniform_block("camera_block", camera_uniform_binding);
+        this->shadow_program.bind_uniform_block("canvas_block", 0);
+        this->shadow_program.bind_uniform_block("light_block", 1);
+        this->light_program.bind_uniform_block("camera_block", camera_uniform_binding);
+        this->light_program.bind_uniform_block("canvas_block", 0);
+        this->light_program.bind_uniform_block("light_block", 1);
+
+        this->light_uniform.create(OpenGL::Buffer::uniform);
+        this->canvas_uniform.create(OpenGL::Buffer::uniform);
 
         this->vao.create();
         this->vao.attach_vbo(0, sizeof(Quad));
@@ -86,23 +115,70 @@ namespace Render {
         this->vao.vert_attr<int[2]>(2, offsetof(Quad, tex_coords) + offsetof(Rect, w));
         this->vao.vert_attr<unsigned int[1]>(3, offsetof(Quad, tex));
         this->vao.vert_attr<unsigned int[1]>(4, offsetof(Quad, flags));
+
+        this->light_vao.create();
+        this->light_vao.attach_ebo();
+        this->light_vao.attach_vbo(0, sizeof(float[2]));
+        this->light_vao.vert_attr<float[2]>(0, 0);
+
+        float vertices[] = {
+            0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+        };
+
+        unsigned int indices[] = {
+            0, 1, 2, 0, 3, 2,
+        };
+
+        this->light_vao.get_vbo().store(vertices, sizeof(vertices), false);
+        this->light_vao.get_ebo().store(indices, sizeof(indices), false);
+
+        OpenGL::Context::blending(true);
     }
 
     void BatchRenderer::push(const Vec2& pos, const Rect& coords, size_t tex, unsigned int flags) {
         this->quads.emplace_back(pos, coords, tex, flags);
     }
 
+    void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity){
+        this->lights.emplace_back(pos, radius, intensity, color);
+    }
+
     void BatchRenderer::render(Canvas& canvas, TextureGroup& textures) {
-        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
         this->program.use();
-        this->canvas_size.store(canvas.x, canvas.y);
+        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
+        this->canvas_uniform.store(&canvas.x, sizeof(unsigned int[2]));
+        this->canvas_uniform.bind(0);
+        this->light_uniform.bind(1);
         this->vao.get_vbo().store(this->quads.data(), this->quads.size() * sizeof(Quad));
+
+        if (!canvas.internal_fbo) {
+            canvas.internal_color.create(OpenGL::Texture::tex2d);
+            canvas.internal_color.alloc(canvas.x, canvas.y, OpenGL::format<8>(OpenGL::Format::R));
+            canvas.internal_fbo.create();
+            canvas.internal_fbo.attach(OpenGL::Framebuffer::COLOR, canvas.internal_color);
+        } else {
+            canvas.internal_fbo.bind();
+            OpenGL::Context::clear();
+        }
 
         textures.bind(0);
         canvas.fbo.bind();
         this->program.draw_patches(this->vao, this->quads.size(), 1);
+
+        canvas.internal_color.bind(0);
+        for (Light& light : this->lights){
+            this->light_uniform.store(&light, sizeof(light));
+
+            canvas.internal_fbo.bind();
+            this->shadow_program.draw_patches(this->vao, this->quads.size(), 1);
+
+            canvas.fbo.bind();
+            this->light_program.draw_tri(this->light_vao, 6);
+        }
+
         canvas.fbo.unbind();
         this->quads.clear();
+        this->lights.clear();
     }
 
     void BatchRenderer::clear(Canvas& canvas) {
@@ -143,8 +219,8 @@ namespace Render {
     }
 
     void SimpleRenderer::render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex, unsigned int flags){
-        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
         this->program.use();
+        OpenGL::Context::set_canvas_size(canvas.x, canvas.y);
         this->canvas_size.store(canvas.x, canvas.y);
         this->coords_uniform.store(tex_coords.x, tex_coords.y, tex_coords.w, tex_coords.h);
         this->pos_uniform.store(pos.x, pos.y);
