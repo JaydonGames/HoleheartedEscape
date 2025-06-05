@@ -153,8 +153,8 @@ namespace Render {
         this->quads.emplace_back(pos, coords, tex, flags);
     }
 
-    void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity) {
-        this->lights.emplace_back(pos, radius, intensity, color);
+    void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity, float decay_rate) {
+        this->lights.emplace_back(pos, radius, intensity, decay_rate, 0, 0, 0, color);
     }
 
     void BatchRenderer::render(Canvas& canvas, TextureGroup& textures) {
@@ -167,7 +167,7 @@ namespace Render {
 
         if (!canvas.internal_fbo) {
             canvas.internal_color.create(OpenGL::Texture::tex2d);
-            canvas.internal_color.alloc(canvas.x, canvas.y, OpenGL::format<8>(OpenGL::Format::R));
+            canvas.internal_color.alloc(canvas.x, canvas.y, OpenGL::format<8>(OpenGL::Format::RG));
             canvas.internal_fbo.create();
             canvas.internal_fbo.attach(OpenGL::Framebuffer::COLOR, canvas.internal_color);
         } else {

@@ -71,7 +71,7 @@ namespace Render {
     public:
         BatchRenderer();
         void push(const Vec2& pos, const Rect& tex_coords, size_t tex, unsigned int flags = 0);
-        void push(const Vec2& pos, const Color& color, unsigned int radius, float intensity);
+        void push(const Vec2& pos, const Color& color, unsigned int radius, float intensity, float decay_rate);
         void render(Canvas& canvas, TextureGroup& textures);
         void clear(Canvas& canvas);
 
@@ -89,7 +89,8 @@ namespace Render {
         struct Light {
             Vec2 pos;
             unsigned int radius;
-            float intensity;
+            float intensity, decay_rate;
+            float p1, p2, p3;
             Color color;
         };
 

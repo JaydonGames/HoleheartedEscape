@@ -153,7 +153,7 @@ int main() {
         if (keystate[SDL_SCANCODE_D])
             ++light.x;
 
-        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.3f);
+        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.5f, 0.9f);
         
         // Rendering
         camera.use();
