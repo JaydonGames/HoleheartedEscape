@@ -24,10 +24,14 @@ Square* PhysicsWorld::get_square(int i) {
 
 // FIX: ADD the for loops here and remove them everywhere else
 void PhysicsWorld::update(double dt) {
-    apply_gravity(dt);
-    update_positions(dt);
-    satisfy_constraints();
-    solve_collisions();
+    const int sub_steps = 8;
+    const float sub_dt = dt / (float)sub_steps;
+    for (int i = sub_steps; i > 0; i--) {
+        apply_gravity(sub_dt);
+        satisfy_constraints();
+        solve_collisions();
+        update_positions(sub_dt);
+    }
 }
 
 void PhysicsWorld::apply_gravity(double dt) {
@@ -57,7 +61,7 @@ void PhysicsWorld::satisfy_constraints() {
         std::array<Constraint*, 4> constraints = square->get_constraints();
         std::array<VerletParticle*, 4> particles = square->get_particles();
 
-        for (int j = 0; j < 10; ++j) {
+        for (int j = 0; j < 5; ++j) {
             for (int i = 0; i < 4; ++i) {
                 Constraint* c = constraints[i];
                 VerletParticle* p1 = particles[c->particle_a];
@@ -155,11 +159,11 @@ void PhysicsWorld::solve_collisions() {
 void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, Render::Vector2D normal, double depth) {
     if (object_1->is_static) {
         for (VerletParticle* particle : object_2->get_particles()) {
-            particle->curr_position = particle->curr_position + normal * depth;
+            particle->curr_position = particle->curr_position + normal * (depth / 1.50f);
         }
     } else if (object_2->is_static) {
         for (VerletParticle* particle : object_1->get_particles()) {
-            particle->curr_position = particle->curr_position + normal * depth;
+            particle->curr_position = particle->curr_position + normal * (depth / 1.50f);
         }
     } else {
         for (VerletParticle* particle : object_1->get_particles()) {

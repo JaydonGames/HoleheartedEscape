@@ -8,8 +8,9 @@
 
 Render::Vector2D Player::PLAYER_JUMP_FORCE;
 
-Player::Player(Render::Vector2D pos) : Square(pos) {
-    PLAYER_JUMP_FORCE = Render::Vector2D(0, -5000.0f);
+Player::Player(Render::Vector2D pos)
+    : Square(pos) {
+    PLAYER_JUMP_FORCE = Render::Vector2D(0, -15000.0f);
     is_jumping = false;
 };
 

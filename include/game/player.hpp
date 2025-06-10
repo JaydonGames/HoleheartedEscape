@@ -9,13 +9,13 @@
 // TODO: Cap player speed in all directions
 // add friction and drag to all objects
 class Player : public Square {
-    public:
-        static Render::Vector2D PLAYER_JUMP_FORCE;
-        static constexpr int PLAYER_SPD = 500;
+public:
+    static Render::Vector2D PLAYER_JUMP_FORCE;
+    static constexpr int PLAYER_SPD = 2500;
 
-        Player(Render::Vector2D pos);
+    Player(Render::Vector2D pos);
 
-        void input();
+    void input();
 
-        bool is_jumping;
+    bool is_jumping;
 };
