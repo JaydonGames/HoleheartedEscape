@@ -61,3 +61,6 @@ AllowShortLoopsOnASingleLine: false
 
 # Keep empty line at the start of a block
 KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Enum Settings
+AllowShortEnumsOnASingleLine: false

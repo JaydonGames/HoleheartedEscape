@@ -22,34 +22,42 @@ constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 // TODO: Modularize this (Aydon help)
 int main() {
-    Render::Vec2 screen{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+    constexpr Render::Vec2 start_size{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
 
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, screen.x,
-                                          screen.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    SDL_Window *window = SDL_CreateWindow("Sample", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, start_size.x,
+                                          start_size.y, SDL_WINDOW_SHOWN | SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
+    OpenGL::Context::debug = true;
     OpenGL::Context context{window};
     Render::BatchRenderer renderer;
-    Render::Camera camera{renderer};
+    Render::SimpleRenderer fbo_renderer;
+    Render::Camera screen_camera, camera;
+    Render::Canvas canvas{SCREEN_WIDTH, SCREEN_HEIGHT}, screen{start_size.x, start_size.y};
+    camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
     context.set_clear_color(0, 0, 0);
     context.enable_vsync();
-    constexpr Render::Vec2 canvas{SCREEN_WIDTH, SCREEN_HEIGHT};
 
-    OpenGL::Framebuffer fbo;
-    OpenGL::Texture color;
-    fbo.bind();
-    color.alloc(OpenGL::format<8>(OpenGL::Format::RGBA), SCREEN_WIDTH, SCREEN_HEIGHT);
+    OpenGL::Framebuffer &fbo = canvas.fbo;
+    OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
+    OpenGL::Texture object_opengl_tex{OpenGL::Texture::tex2d, Textures::objects.data, Textures::objects.length};
+    fbo.create();
     fbo.attach(0, color);
-    fbo.unbind();
 
-    Tiled::Map::register_texture("main_tileset", Textures::main_tileset);
-    Tiled::Map::register_tileset("main_tileset", Tilesets::main_tileset);
-    Tiled::Map test_map{Maps::test_map};
+    Render::Vec2 light{int(0.25*canvas.x/2), int(0.25*canvas.y/2)};
 
-    OpenGL::Texture bg{Textures::background};
-    OpenGL::Texture player_tex{Textures::Crystal};
-    OpenGL::Texture object_tex{Textures::objects};
+    Render::TextureGroup textures;
+    size_t bg = textures.push_back(Textures::background);
+    size_t player_tex = textures.push_back(Textures::Crystal);
+    size_t object_tex = textures.push_back(Textures::objects);
+    size_t main_tileset = textures.push_back(Textures::main_tileset);
+    textures.finalize();
+
+    Tiled::World world;
+    world.register_texture("main_tileset", main_tileset);
+    world.register_tileset("main_tileset", Tilesets::main_tileset);
+    Tiled::Map test_map{world, Maps::test_map};
 
     PhysicsWorld engine;
 
@@ -59,12 +67,11 @@ int main() {
     Square object{Render::Vector2D(80, 224), 16.0f};
     engine.add_square(&object);
 
-    Tiled::Layer collision_layer = test_map.layers[0];
+    Tiled::Layer collision_layer = test_map[0];
     std::deque<Square> collision_tiles;
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-            Tiled::Tile &tile = collision_layer.tiles[y][x];
-            if (tile.empty)
+            if (!collision_layer.tiles[y][x].tile)
                 continue;
             collision_tiles.emplace_back(Render::Vector2D(x * 16, y * 16), 16.0f, true);
             engine.add_square(&collision_tiles.back());
@@ -94,8 +101,10 @@ int main() {
                 running = false;
                 break;
             }
-            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED)
-                screen = {e.window.data1, e.window.data2};
+            if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_RESIZED) {
+                screen.x = e.window.data1;
+                screen.y = e.window.data2;
+            }
         }
         player.input();
         std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
@@ -104,21 +113,21 @@ int main() {
         // Updating
         engine.update(dt);
 
-        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0);
+        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, Render::NoSelfShadows);
         for (auto &layer : test_map.layers) {
             for (int y = 0; y < layer.tiles.size(); ++y) {
                 for (int x = 0; x < layer.tiles[y].size(); ++x) {
-                    Tiled::Tile &tile = layer.tiles[y][x];
-                    if (tile.empty)
+                    Tiled::Tile *tile = layer.tiles[y][x].tile;
+                    if (!tile)
                         continue;
-                    Render::Rect coords = tile.get_coords();
-                    renderer.push({x * coords.w, y * coords.h}, coords, tile.get_texture(), tile.get_flags());
+                    renderer.push({x * tile->coords.w, y * tile->coords.h}, tile->coords, tile->tex,
+                                  layer.tiles[y][x].flags);
                 }
             }
         }
 
         Render::Vector2D player_curr_position = player.get_curr_position();
-        renderer.push({player_curr_position.x, player_curr_position.y}, {0, 0, 16, 16}, player_tex, 0);
+        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0);
         // std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
         // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
@@ -131,22 +140,33 @@ int main() {
         // std::cout << '\n';
 
         Render::Vector2D object_curr_position = object.get_curr_position();
-        renderer.push({object_curr_position.x, object_curr_position.y}, {0, 0, 16, 16}, object_tex, 0);
+        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
 
+        // Light
+        const uint8_t* keystate = SDL_GetKeyboardState(NULL);
+        if (keystate[SDL_SCANCODE_W])
+            --light.y;
+        if (keystate[SDL_SCANCODE_S])
+            ++light.y;
+        if (keystate[SDL_SCANCODE_A])
+            --light.x;
+        if (keystate[SDL_SCANCODE_D])
+            ++light.x;
+
+        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.5f, 0.9f);
+        
         // Rendering
-        renderer.set_canvas(canvas.x, canvas.y);
-        camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
-        renderer.clear(fbo);
-        renderer.render(fbo);
+        camera.use();
+        renderer.clear(canvas);
+        renderer.render(canvas, textures);
 
-        renderer.set_canvas(screen.x, screen.y);
+        screen_camera.use();
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
-        camera.set(screen.x / 2, screen.y / 2, zoom);
-        renderer.push({int((screen.x * zoom - canvas.x) / 2), int((screen.y * zoom - canvas.y) / 2)},
-                      {0, 0, canvas.x, canvas.y}, color, Render::FlipY);
-        renderer.clear();
-        renderer.render();
+        int offset_x = (screen.x * zoom - canvas.x) / 2, offset_y = (screen.y * zoom - canvas.y) / 2;
+        screen_camera.set(screen.x / 2, screen.y / 2, zoom);
 
+        fbo_renderer.clear(screen);
+        fbo_renderer.render(screen, {offset_x, offset_y}, {0, 0, int(canvas.x), int(canvas.y)}, color);
         context.swap_buffer();
 
         ++frame_count;

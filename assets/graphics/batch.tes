@@ -1,0 +1,45 @@
+#version 430
+layout(quads, equal_spacing) in;
+
+#define FLIP_DIAG (1<<0)
+#define FLIP_X (1<<1)
+#define FLIP_Y (1<<2)
+
+patch in ivec2 tex_xy;
+patch in ivec2 tex_wh;
+patch in uint tex;
+patch in uint flags;
+
+flat out uint tex_id;
+out vec2 tex_coords;
+
+uniform sampler2DArray tex_array;
+layout(std140) uniform camera_block {
+    ivec2 camera;
+    float zoom;
+};
+layout(std140) uniform canvas_block {
+    uvec2 canvas;
+};
+
+void main() {
+    vec2 vert = gl_TessCoord.xy;
+    vec2 pos = gl_in[0].gl_Position.xy;
+    pos += vert * tex_wh - camera * zoom + (canvas * zoom) / 2;
+    pos *= 2.0 / (canvas * zoom);
+    pos -= 1;
+    pos.y *= -1;
+    gl_Position = vec4(pos, 0, 1);
+
+    vec2 tex_axis = vert;
+    vec2 tex_size = textureSize(tex_array, 0).xy;
+    if (bool(flags & uint(FLIP_X)))
+        tex_axis.x = 1 - tex_axis.x;
+    if (bool(flags & uint(FLIP_Y)))
+        tex_axis.y = 1 - tex_axis.y;
+    if (bool(flags & uint(FLIP_DIAG)))
+        tex_axis = tex_axis.yx;
+
+    tex_id = tex;
+    tex_coords = tex_xy / tex_size + tex_axis * tex_wh / tex_size;
+}

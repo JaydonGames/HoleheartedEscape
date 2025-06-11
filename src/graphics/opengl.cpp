@@ -6,6 +6,7 @@
 #include <SDL_surface.h>
 #include <SDL_video.h>
 #include <cassert>
+#include <iostream>
 
 namespace OpenGL {
 
@@ -24,8 +25,19 @@ namespace OpenGL {
     InitError::InitError(const unsigned char *what)
         : std::runtime_error(std::string(what, what + strlen(reinterpret_cast<const char *>(what)))) {}
 
+    void opengl_debug_out(GLenum source, GLenum type, unsigned int id, GLenum severity, GLsizei length,
+                          const char *message, const void *) {
+        if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+            return;
+        std::cout << "OpenGL message (" << id << "): " << message << std::endl;
+    }
+
+    bool Context::debug = false;
+
     Context::Context(SDL_Window *window, int major, int minor, bool core)
         : window(window) {
+        if (Context::debug)
+            SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
@@ -37,6 +49,29 @@ namespace OpenGL {
         unsigned int err = glewInit();
         if (err)
             throw InitError{glewGetErrorString(err)};
+
+        if (Context::debug) {
+            glEnable(GL_DEBUG_OUTPUT);
+            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+            glDebugMessageCallback(opengl_debug_out, nullptr);
+            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        }
+    }
+
+    void Context::wireframe(bool enable) {
+        if (enable) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            glLineWidth(5.0f);
+        } else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
+    void Context::blending(bool enable) {
+        if (enable) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        } else
+            glDisable(GL_BLEND);
     }
 
     bool Context::enable_vsync() {
@@ -113,65 +148,24 @@ namespace OpenGL {
         return format;
     }
 
-    Texture::Texture(const uint8_t data[], size_t length) {
-        this->load(data, length);
+    Buffer::Buffer(Type type) {
+        this->create(type);
     }
 
-    Texture::Texture(const Textures::asset_t &texture)
-        : Texture(texture.data, texture.length) {}
-
-    Texture::Texture(Texture &&other) : Entity<Texture>(std::move(other)) {
-        this->w = other.w;
-        this->h = other.h;
+    Buffer::Buffer(Type type, const void *arr, size_t size, bool dynamic) {
+        this->create(type);
+        this->store(arr, size, dynamic);
     }
 
-    void Texture::destroy() {
-        if (this->id)
-            glDeleteTextures(1, &this->id);
-        this->id = 0;
+    Buffer::Buffer(Type type, size_t size) {
+        this->create(type);
+        this->alloc(size);
     }
 
-    void Texture::load(const uint8_t data[], size_t length) {
-        assert(!this->id);
-        glGenTextures(1, &this->id);
-        this->bind();
-
-        SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
-        SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
-        this->w = surface->w;
-        this->h = surface->h;
-        SDL_FreeSurface(loaded_surface);
-        SDL_FreeSurface(surface);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-
-    void Texture::alloc(Format format, unsigned int width, unsigned int height) {
-        assert(!this->id);
-        glGenTextures(1, &this->id);
-        this->w = width;
-        this->h = height;
-        this->bind();
-        glTexImage2D(GL_TEXTURE_2D, 0, format.to_opengl(), width, height, 0, GL_RGBA, GL_BYTE, nullptr);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    }
-
-    void Texture::bind(unsigned int index) {
-        glActiveTexture(GL_TEXTURE0 + index);
-        glBindTexture(GL_TEXTURE_2D, this->id);
-    }
-
-    Buffer::Buffer() {
-        glGenBuffers(1, &this->id);
+    void Buffer::create(Type type) {
+        this->destroy();
+        this->type = type;
+        glCreateBuffers(1, &this->id);
     }
 
     void Buffer::destroy() {
@@ -180,23 +174,19 @@ namespace OpenGL {
         this->id = 0;
     }
 
-    void Buffer::bind(Type type) {
-        glBindBuffer(type, this->id);
+    void Buffer::bind(unsigned int index) {
+        glBindBufferBase(this->type, index, this->id);
     }
 
-    void Buffer::bind(Type type, unsigned int index) {
-        glBindBufferBase(type, index, this->id);
+    void Buffer::store(const void *arr, size_t size, bool dynamic) {
+        glNamedBufferData(this->id, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     }
 
-    void Buffer::store(Type type, const void *arr, size_t size, bool dynamic) {
-        glBufferData(type, size, arr, dynamic ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
+    void Buffer::alloc(size_t size) {
+        this->store(nullptr, size, true);
     }
 
-    void Buffer::alloc(Type type, size_t size) {
-        Buffer::store(type, nullptr, size, true);
-    }
-
-    void Buffer::sync(Type type) {
+    void Buffer::sync() {
         unsigned int bit;
         switch (type) {
             case shader:
@@ -209,21 +199,27 @@ namespace OpenGL {
         glMemoryBarrier(bit);
     }
 
-    void *Buffer::map(Type type, bool writeable) {
-        return glMapBuffer(type, writeable ? GL_READ_WRITE : GL_READ_ONLY);
+    void Buffer::get_data(void *data, size_t size, ptrdiff_t offset) const {
+        glGetNamedBufferSubData(this->id, offset, size, data);
     }
 
-    void Buffer::unmap(Type type) {
-        glUnmapBuffer(type);
+    void *Buffer::map(bool writeable) {
+        return glMapNamedBuffer(this->id, writeable ? GL_READ_WRITE : GL_READ_ONLY);
     }
 
-    VertexArray::VertexArray(Buffer &&vbo, Buffer &&ebo)
-        : vbo(std::move(vbo)),
-          ebo(std::move(ebo)) {
-        glGenVertexArrays(1, &this->id);
-        this->bind();
-        this->vbo.bind(Buffer::Type::vertex);
-        this->ebo.bind(Buffer::Type::index);
+    void Buffer::unmap() {
+        glUnmapNamedBuffer(this->id);
+    }
+
+    VertexArray::VertexArray(ptrdiff_t offset, int stride) {
+        this->create();
+        this->attach_vbo(offset, stride);
+        this->attach_ebo();
+    }
+
+    void VertexArray::create() {
+        this->destroy();
+        glCreateVertexArrays(1, &this->id);
     }
 
     void VertexArray::destroy() {
@@ -236,39 +232,54 @@ namespace OpenGL {
         glBindVertexArray(this->id);
     }
 
-    void VertexArray::draw_triangles(int vertex_count) {
-        glDrawElements(GL_TRIANGLES, vertex_count, GL_UNSIGNED_INT, nullptr);
+    Buffer &VertexArray::attach_vbo(ptrdiff_t offset, int stride, Buffer &&buffer) {
+        glVertexArrayVertexBuffer(this->id, 0, buffer.get(), offset, stride);
+        this->vbo = std::move(buffer);
+        return this->vbo;
+    }
+
+    Buffer &VertexArray::attach_ebo(Buffer &&buffer) {
+        glVertexArrayElementBuffer(this->id, buffer.get());
+        this->ebo = std::move(buffer);
+        return this->ebo;
+    }
+
+    Buffer &VertexArray::get_vbo() {
+        return this->vbo;
+    }
+
+    Buffer &VertexArray::get_ebo() {
+        return this->ebo;
     }
 
     template<typename T>
-    void VertexArray::vert_attr(unsigned int index, uintptr_t offset, int stride) {
+    void VertexArray::vert_attr(unsigned int index, unsigned int offset, bool normalized) {
         constexpr int dimensions = std::extent_v<T>;
         using attr_t = std::remove_cvref_t<decltype(std::declval<T>()[0])>;
 
-        unsigned int type;
         if constexpr (std::is_same_v<attr_t, float>)
-            type = GL_FLOAT;
+            glVertexArrayAttribFormat(this->id, index, dimensions, GL_FLOAT, normalized, offset);
         if constexpr (std::is_same_v<attr_t, unsigned int>)
-            type = GL_UNSIGNED_INT;
+            glVertexArrayAttribIFormat(this->id, index, dimensions, GL_UNSIGNED_INT, offset);
         if constexpr (std::is_same_v<attr_t, int>)
-            type = GL_INT;
+            glVertexArrayAttribIFormat(this->id, index, dimensions, GL_INT, offset);
 
-        glVertexAttribPointer(index, dimensions, type, false, stride, (void *)(offset));
-        glEnableVertexAttribArray(index);
+        glEnableVertexArrayAttrib(this->id, index);
+        glVertexArrayAttribBinding(this->id, index, 0);
     }
 
-    template void VertexArray::vert_attr<float[1]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<float[2]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<float[3]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<float[4]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<int[1]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<int[2]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<int[3]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<int[4]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<unsigned int[1]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<unsigned int[2]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<unsigned int[3]>(unsigned int, uintptr_t, int);
-    template void VertexArray::vert_attr<unsigned int[4]>(unsigned int, uintptr_t, int);
+    template void VertexArray::vert_attr<float[1]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<float[2]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<float[3]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<float[4]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<int[1]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<int[2]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<int[3]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<int[4]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<unsigned int[1]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<unsigned int[2]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<unsigned int[3]>(unsigned int, unsigned int, bool);
+    template void VertexArray::vert_attr<unsigned int[4]>(unsigned int, unsigned int, bool);
 
     void Uniform::store(float f1) {
         glUniform1f(this->id, f1);
@@ -361,20 +372,21 @@ namespace OpenGL {
     template void Uniform::store<1>(const unsigned int *arr, size_t count);
     template void Uniform::store<2>(const unsigned int *arr, size_t count);
     template void Uniform::store<3>(const unsigned int *arr, size_t count);
-    template void Uniform::store<4>(const unsigned int *arr, size_t count);
+    template void Uniform::store<4>(const unsigned int *aloadrr, size_t count);
     template void Uniform::store<1>(const int *arr, size_t count);
     template void Uniform::store<2>(const int *arr, size_t count);
     template void Uniform::store<3>(const int *arr, size_t count);
     template void Uniform::store<4>(const int *arr, size_t count);
 
     Shader::Shader(Type type, const char *shader) {
-        this->compile(type, shader);
+        this->create(type, shader);
     }
 
-    void Shader::compile(Type type, const char *shader) {
+    void Shader::create(Type type, const char *shader) {
+        this->destroy();
         this->id = glCreateShader(type);
         glShaderSource(this->id, 1, &shader, nullptr);
-        glCompileShader(id);
+        glCompileShader(this->id);
         int success;
         glGetShaderiv(this->id, GL_COMPILE_STATUS, &success);
         if (!success) {
@@ -391,10 +403,23 @@ namespace OpenGL {
         this->id = 0;
     }
 
-    void Program::attach(const Shader &shader) {
-        if (!this->id)
-            this->id = glCreateProgram();
-        glAttachShader(this->id, shader.id);
+    Program::Program(std::initializer_list<Shader> shaders) {
+        this->create();
+        for (const Shader &shader : shaders)
+            this->attach(shader);
+        this->link();
+    }
+
+    Program::Program(std::initializer_list<Shader *> shaders) {
+        this->create();
+        for (Shader *shader : shaders)
+            this->attach(*shader);
+        this->link();
+    }
+
+    void Program::create() {
+        this->destroy();
+        this->id = glCreateProgram();
     }
 
     void Program::destroy() {
@@ -403,11 +428,15 @@ namespace OpenGL {
         this->id = 0;
     }
 
+    void Program::attach(const Shader &shader) {
+        glAttachShader(this->id, shader.id);
+    }
+
     void Program::link() {
         glLinkProgram(this->id);
     }
 
-    void Program::bind() {
+    void Program::use() {
         glUseProgram(this->id);
     }
 
@@ -415,20 +444,156 @@ namespace OpenGL {
         return glGetUniformLocation(this->id, name);
     }
 
-    void Program::bind_uniform_buffer(const char *name, unsigned int binding) {
+    void Program::bind_uniform_block(const char *name, unsigned int binding) {
         glUniformBlockBinding(this->id, glGetUniformBlockIndex(this->id, name), binding);
     }
 
     void Program::compute(unsigned int x, unsigned int y, unsigned int z) {
+        this->use();
         glDispatchCompute(x, y, z);
     }
 
-    Renderbuffer::Renderbuffer() {
-        this->load();
+    void Program::draw_tri(VertexArray &vao, int vert_count) {
+        this->use();
+        vao.bind();
+        glDrawElements(GL_TRIANGLES, vert_count, GL_UNSIGNED_INT, nullptr);
     }
 
-    void Renderbuffer::load() {
-        glGenRenderbuffers(1, &this->id);
+    void Program::draw_patches(VertexArray &vao, int vert_count, int vert_per_patch) {
+        glPatchParameteri(GL_PATCH_VERTICES, vert_per_patch);
+        this->use();
+        vao.bind();
+        glDrawArrays(GL_PATCHES, 0, vert_count);
+    }
+
+    Texture::Texture(Type type) {
+        this->create(type);
+    }
+
+    Texture::Texture(Type type, const uint8_t data[], size_t length) {
+        this->create(type);
+        this->load(data, length);
+    }
+
+    Texture::Texture(Type type, const uint8_t data[], size_t length, int level) {
+        this->create(type);
+        this->load(data, length, level);
+    }
+
+    Texture::Texture(Type type, unsigned int width, unsigned int height, Format format) {
+        this->create(type);
+        this->alloc(width, height, format);
+    }
+
+    Texture::Texture(const Textures::asset_t &texture)
+        : Texture(tex2d, texture.data, texture.length) {}
+
+    Texture::Texture(Texture &&other)
+        : Entity<Texture>(std::move(other)) {
+        this->w = other.w;
+        this->h = other.h;
+    }
+
+    void Texture::create(Type type) {
+        this->destroy();
+        this->type = type;
+        glCreateTextures(type, 1, &this->id);
+    }
+
+    void Texture::destroy() {
+        if (this->id)
+            glDeleteTextures(1, &this->id);
+        this->id = 0;
+    }
+
+    void Texture::bind(unsigned int index) {
+        glActiveTexture(GL_TEXTURE0 + index);
+        glBindTexture(this->type, this->id);
+    }
+
+    void Texture::load(const uint8_t data[], size_t length, bool flip_y) {
+        SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
+        SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+        this->alloc(surface->w, surface->h);
+
+        if (!flip_y)
+            for (size_t y = 0; y < this->h; ++y)
+                this->store((uint8_t *)surface->pixels + (this->h - 1 - y) * surface->pitch, surface->w, 1, 0, y);
+        else
+            this->store((uint8_t *)surface->pixels, surface->w, surface->h);
+
+        SDL_FreeSurface(loaded_surface);
+        SDL_FreeSurface(surface);
+    }
+
+    void Texture::load(const uint8_t data[], size_t length, int level, bool flip_y) {
+        SDL_Surface *loaded_surface = IMG_Load_RW(SDL_RWFromConstMem(data, length), true);
+        SDL_Surface *surface = SDL_ConvertSurfaceFormat(loaded_surface, SDL_PIXELFORMAT_RGBA32, 0);
+
+        if (!flip_y)
+            for (size_t y = 0; y < this->h; ++y)
+                this->store((uint8_t *)surface->pixels + (this->h - 1 - y) * surface->pitch, surface->w, 1, 1, 0, y,
+                            level);
+        else
+            this->store((uint8_t *)surface->pixels, surface->w, surface->h, 1, 0, 0, level);
+
+        SDL_FreeSurface(loaded_surface);
+        SDL_FreeSurface(surface);
+    }
+
+    void Texture::store(const uint8_t data[], int width, int height, int offset_x, int offset_y) {
+        glTextureSubImage2D(this->id, 0, offset_x, offset_y, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    }
+
+    void Texture::store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y,
+                        int offset_z) {
+        glTextureSubImage3D(this->id, 0, offset_x, offset_y, offset_z, width, height, depth, GL_RGBA, GL_UNSIGNED_BYTE,
+                            data);
+    }
+
+    void Texture::alloc(unsigned int width, unsigned int height, Format format) {
+        this->w = width;
+        this->h = height;
+        this->d = 1;
+        glTextureStorage2D(this->id, 1, format.to_opengl(), this->w, this->h);
+    }
+
+    void Texture::alloc(unsigned int width, unsigned int height, unsigned int depth, Format format) {
+        this->w = width;
+        this->h = height;
+        this->d = depth;
+        glTextureStorage3D(this->id, 1, format.to_opengl(), this->w, this->h, this->d);
+    }
+
+    void Texture::set_wrap_x(Wrap wrap) {
+        glTextureParameteri(this->id, GL_TEXTURE_WRAP_S, wrap);
+    }
+
+    void Texture::set_wrap_y(Wrap wrap) {
+        glTextureParameteri(this->id, GL_TEXTURE_WRAP_T, wrap);
+    }
+
+    void Texture::set_mag_filter(Filter filter) {
+        glTextureParameteri(this->id, GL_TEXTURE_MAG_FILTER, filter);
+    }
+
+    void Texture::set_min_filter(Filter filter) {
+        glTextureParameteri(this->id, GL_TEXTURE_MIN_FILTER, filter);
+    }
+
+    void Texture::generate_minmap() {
+        glGenerateTextureMipmap(this->id);
+    }
+
+    Renderbuffer::Renderbuffer(const Format &format, int x, int y) {
+        this->create();
+        this->alloc(format, x, y);
+    }
+
+    void Renderbuffer::create() {
+        this->destroy();
+        glCreateRenderbuffers(1, &this->id);
     }
 
     void Renderbuffer::destroy() {
@@ -436,20 +601,13 @@ namespace OpenGL {
             glDeleteRenderbuffers(1, &this->id);
     }
 
-    void Renderbuffer::bind() {
-        glBindRenderbuffer(GL_RENDERBUFFER, this->id);
-    }
-
     void Renderbuffer::alloc(const Format &format, int x, int y) {
-        glRenderbufferStorage(GL_RENDERBUFFER, format.to_opengl(), x, y);
+        glNamedRenderbufferStorage(this->id, format.to_opengl(), x, y);
     }
 
-    Framebuffer::Framebuffer() {
-        this->load();
-    }
-
-    void Framebuffer::load() {
-        glGenFramebuffers(1, &this->id);
+    void Framebuffer::create() {
+        this->destroy();
+        glCreateFramebuffers(1, &this->id);
     }
 
     void Framebuffer::destroy() {
@@ -466,22 +624,19 @@ namespace OpenGL {
     }
 
     void Framebuffer::attach(Attachment attachment, Renderbuffer &buffer) {
-        buffer.bind();
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, attachment, GL_RENDERBUFFER, this->id);
+        glNamedFramebufferRenderbuffer(this->id, attachment, GL_RENDERBUFFER, buffer.get());
     }
 
     void Framebuffer::attach(unsigned int attachment, Renderbuffer &buffer) {
-        buffer.bind();
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, COLOR + attachment, GL_RENDERBUFFER, this->id);
+        glNamedFramebufferRenderbuffer(this->id, COLOR + attachment, GL_RENDERBUFFER, buffer.get());
     }
 
     void Framebuffer::attach(Attachment attachment, Texture &buffer) {
-        buffer.bind();
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, GL_TEXTURE_2D, this->id, 0);
+        glNamedFramebufferTexture(this->id, attachment, buffer.get(), 0);
     }
 
     void Framebuffer::attach(unsigned int attachment, Texture &buffer) {
-        buffer.bind();
-        glFramebufferTexture2D(GL_FRAMEBUFFER, COLOR + attachment, GL_TEXTURE_2D, this->id, 0);
+        glNamedFramebufferTexture(this->id, COLOR + attachment, buffer.get(), 0);
     }
+
 }

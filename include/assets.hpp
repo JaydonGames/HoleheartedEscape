@@ -2,8 +2,20 @@
 namespace Shaders {
     typedef const char asset_t[];
 
-    extern asset_t batch_render_vert;
-    extern asset_t batch_render_frag;
+    extern asset_t simple_vert;
+    extern asset_t simple_frag;
+
+    extern asset_t batch_vert;
+    extern asset_t batch_tcs;
+    extern asset_t batch_tes;
+    extern asset_t batch_frag;
+
+    extern asset_t shadow_tcs;
+    extern asset_t shadow_tes;
+    extern asset_t shadow_frag;
+
+    extern asset_t light_vert;
+    extern asset_t light_frag;
 }
 
 namespace Textures {

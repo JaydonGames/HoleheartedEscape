@@ -1,162 +1,158 @@
-#include "map.hpp"
-#include "tinyxml2.h"
-#include <filesystem>
+#include <cstdint>
 #include <sstream>
 #include <string_view>
+#include <filesystem>
+#include "tiled/map.hpp"
+#include "graphics/render.hpp"
+#include "tinyxml2.h"
+
+namespace fs = std::filesystem;
 
 namespace Tiled {
 
-Tile::Tile(uint32_t gid, const std::vector<std::pair<uint32_t, size_t>>& tileset_gids) {
-    if (!gid)
-        return;
+    struct TilesetId {
+        uint32_t id;
+        Tileset* tileset;
+    };
 
-    empty = false;
-    this->render_flags |= gid & (1 << 31) ? Render::Flags::FlipX : 0;
-    this->render_flags |= gid & (1 << 30) ? Render::Flags::FlipY : 0;
-    this->render_flags |= gid & (1 << 29) ? Render::Flags::FlipDiagonally : 0;
-    gid &= 0xfffffff;
+    MapTile MapTile::from_gid(uint32_t gid, std::vector<TilesetId> tilesets) {
+        if (!gid)
+            return {};
 
-    for (this->tileset = 0; tileset + 1 < tileset_gids.size(); ++tileset)
-        if (tileset_gids[this->tileset + 1].first > gid)
-            break;
+        MapTile tile;
+        tile.flags |= gid & (1 << 31) ? Render::Flags::FlipX : 0;
+        tile.flags |= gid & (1 << 30) ? Render::Flags::FlipY : 0;
+        tile.flags |= gid & (1 << 29) ? Render::Flags::FlipDiag : 0;
+        gid &= 0xfffffff;
 
-    this->tile = gid - tileset_gids[this->tileset].first;
-    this->tileset = tileset_gids[this->tileset].second;
-}
+        size_t tileset;
+        for (tileset = 0; tileset < tilesets.size() - 1; ++tileset)
+            if (tilesets[tileset + 1].id > gid)
+                break;
 
-Tile::Data& Tile::get_data() {
-    return Tiled::Map::get_tileset(this->tileset)[this->tile];
-}
+        tile.tile = &tilesets[tileset].tileset->tiles[gid - tilesets[tileset].id];
+        return tile;
+    }
 
-Render::Rect Tile::get_coords() {
-    return this->get_data().coords;
-}
+    Map::Map(World& world, const char* map) {
+        tinyxml2::XMLDocument doc;
+        tinyxml2::XMLElement* root;
+        doc.Parse(map);
+        root = doc.RootElement();
 
-unsigned int Tile::get_flags() {
-    return this->render_flags;
-}
+        const char* render_order = "";
+        root->QueryAttribute("renderorder", &render_order);
+        root->QueryAttribute("width", &this->width);
+        root->QueryAttribute("height", &this->height);
+        root->QueryAttribute("tilewidth", &this->tile_width);
+        root->QueryAttribute("tileheight", &this->tile_height);
 
-OpenGL::Texture& Tile::get_texture() {
-    return Map::get_texture(this->get_data().texture);
-}
+        if (render_order == std::string_view{"right-up"})
+            this->render_order = RenderOrder::RightUp;
+        else if (render_order == std::string_view{"left-down"})
+            this->render_order = RenderOrder::LeftDown;
+        else if (render_order == std::string_view{"left-up"})
+            this->render_order = RenderOrder::LeftUp;
+        else
+            this->render_order = RenderOrder::RightDown;
 
-RenderOrder render_order_from_str(std::string_view str) {
-    if (str == "right-up")
-        return RenderOrder::RightUp;
-    if (str == "left-down")
-        return RenderOrder::LeftDown;
-    if (str == "left-up")
-        return RenderOrder::LeftUp;
-    return RenderOrder::RightDown;
-}
+        const char* name;
+        std::vector<TilesetId> tilesets;
+        for (tinyxml2::XMLElement* tileset = root->FirstChildElement("tileset"); tileset;
+             tileset = tileset->NextSiblingElement("tileset")) {
+            TilesetId& entry = tilesets.emplace_back();
+            tileset->QueryAttribute("firstgid", &entry.id);
+            tileset->QueryAttribute("source", &name);
+            entry.tileset = &world.get_tileset(name);
+        }
 
-Grid<Tile> Map::parse_csv_grid(size_t width, size_t height, const char* csv,
-                               const std::vector<std::pair<uint32_t, size_t>>& tileset_gids) {
-    Grid<Tile> layer{width, height};
+        for (tinyxml2::XMLElement* layer = root->FirstChildElement("layer"); layer;
+             layer = layer->NextSiblingElement("layer")) {
+            layers.emplace_back();
+            layer->QueryAttribute("width", &layers.back().width);
+            layer->QueryAttribute("height", &layers.back().height);
+            layer->QueryAttribute("name", &layers.back().name);
 
-    std::stringstream data{csv};
-    for (size_t y = 0; y < height; ++y) {
-        for (size_t x = 0; x < width; ++x) {
-            uint32_t gid;
-            data >> gid;
-            data.ignore();
-            layer[y][x] = Tile{gid, tileset_gids};
+            tinyxml2::XMLElement* data = layer->FirstChildElement("data");
+            const char* encoding = "";
+            data->QueryAttribute("encoding", &encoding);
+
+            if (encoding == std::string_view{"csv"}) {
+                std::stringstream csv{data->GetText()};
+                Grid<MapTile>& grid = layers.back().tiles;
+                grid = {layers.back().width, layers.back().height};
+
+                uint32_t gid;
+                for (size_t y = 0; y < height; ++y) {
+                    for (size_t x = 0; x < width; ++x) {
+                        csv >> gid;
+                        csv.ignore();
+                        grid[y][x] = MapTile::from_gid(gid, tilesets);
+                    }
+                }
+            }
         }
     }
 
-    return layer;
-}
-
-Map::Map(const char* map_string) {
-    tinyxml2::XMLDocument doc;
-    doc.Parse(map_string);
-    tinyxml2::XMLElement* map = doc.RootElement();
-
-    const char* render_order = "right-down";
-    map->QueryAttribute("renderorder", &render_order);
-    this->render_order = render_order_from_str(render_order);
-
-    map->QueryAttribute("width", &this->width);
-    map->QueryAttribute("height", &this->height);
-    map->QueryAttribute("tilewidth", &this->tile_width);
-    map->QueryAttribute("tileheight", &this->tile_height);
-
-    std::vector<std::pair<uint32_t, size_t>> tileset_gids;
-    for (tinyxml2::XMLElement* tileset = map->FirstChildElement("tileset"); tileset;
-         tileset = tileset->NextSiblingElement("tileset")) {
-        std::pair<uint32_t, size_t>& entry = tileset_gids.emplace_back();
-        tileset->QueryAttribute("firstgid", &entry.first);
-        const char* texture;
-        tileset->QueryAttribute("source", &texture);
-        entry.second = Map::get_texture(texture);
+    Layer& Map::operator[](std::string_view str) {
+        for (Layer& layer : this->layers)
+            if (layer.name == str)
+                return layer;
+        throw std::runtime_error{"Map::operator[](std::string_view): Layer does not exist."};
     }
 
-    for (tinyxml2::XMLElement* layer_elem = map->FirstChildElement("layer"); layer_elem;
-         layer_elem = layer_elem->NextSiblingElement("layer")) {
-        Layer layer;
-        const char* name;
-        layer_elem->QueryAttribute("width", &layer.width);
-        layer_elem->QueryAttribute("height", &layer.height);
-        layer_elem->QueryAttribute("name", &name);
-        layer.name = name;
-
-        tinyxml2::XMLElement* data = layer_elem->FirstChildElement("data");
-        const char* encoding = "csv";
-        data->QueryAttribute("encoding", &encoding);
-
-        if (std::string_view{encoding} == "csv")
-            layer.tiles = parse_csv_grid(layer.width, layer.height, data->GetText(), tileset_gids);
-
-        this->layers.push_back(layer);
-    }
-}
-
-std::vector<OpenGL::Texture> Map::textures;
-std::vector<std::vector<Tile::Data>> Map::tilesets;
-std::unordered_map<std::string, size_t> Map::texture_names, Map::tileset_names;
-
-void Map::register_tileset(const char* filename, const char* tileset_string) {
-    tinyxml2::XMLDocument doc;
-    doc.Parse(tileset_string);
-    tinyxml2::XMLElement* tileset = doc.RootElement();
-    tinyxml2::XMLElement* image = tileset->FirstChildElement("image");
-    int tile_width, tile_height, tile_count, column_count, image_width, image_height;
-    const char* image_file;
-    tileset->QueryAttribute("tilewidth", &tile_width);
-    tileset->QueryAttribute("tileheight", &tile_height);
-    tileset->QueryAttribute("tilecount", &tile_count);
-    tileset->QueryAttribute("columns", &column_count);
-    image->QueryAttribute("width", &image_width);
-    image->QueryAttribute("height", &image_height);
-    image->QueryAttribute("source", &image_file);
-
-    std::vector<Tile::Data> tiles;
-    for (size_t i = 0; i < tile_count; ++i) {
-        float x = i % column_count, y = i / column_count;
-        tiles.emplace_back(Render::Rect{x * tile_width, y * tile_height, tile_width, tile_height},
-                           Map::get_texture(image_file));
+    Layer& Map::operator[](size_t i) {
+        return layers[i];
     }
 
-    tileset_names[filename] = &Map::tilesets.emplace_back(std::move(tiles)) - Map::tilesets.data();
-}
+    Tileset::Tileset(World* world, const char* tileset) {
+        tinyxml2::XMLDocument doc;
+        tinyxml2::XMLElement *root, *image;
+        doc.Parse(tileset);
+        root = doc.RootElement();
+        image = root->FirstChildElement("image");
 
-void Map::register_texture(const char* name, OpenGL::Texture&& texture) {
-    Map::texture_names[std::string{name}] = &Map::textures.emplace_back(std::move(texture)) - Map::textures.data();
-}
+        const char* image_file;
+        int tile_width, tile_height, tile_count, column_count, image_width, image_height;
+        root->QueryAttribute("tilewidth", &tile_width);
+        root->QueryAttribute("tileheight", &tile_height);
+        root->QueryAttribute("tilecount", &tile_count);
+        root->QueryAttribute("columns", &column_count);
+        image->QueryAttribute("width", &image_width);
+        image->QueryAttribute("height", &image_height);
+        image->QueryAttribute("source", &image_file);
 
-OpenGL::Texture& Map::get_texture(size_t id) {
-    return Map::textures[id];
-}
+        for (size_t i = 0; i < tile_count; ++i) {
+            int x = i % column_count, y = size_t(i / column_count);
+            this->tiles.emplace_back(Render::Rect{x * tile_width, y * tile_height, tile_width, tile_height},
+                                     world->get_texture(image_file));
+        }
+    }
 
-size_t Map::get_texture(const std::string name) {
-    return Map::texture_names[std::filesystem::path{name}.stem().string()];
-}
+    void World::register_tileset(const char* name, const char* tileset) {
+        tilesets[name] = {this, tileset};
+    }
 
-std::vector<Tile::Data>& Map::get_tileset(size_t id) {
-    return Map::tilesets[id];
-}
+    void World::register_tileset(const char* name, Tileset&& tileset) {
+        tilesets[name] = std::move(tileset);
+    }
 
-size_t Map::get_tileset(const std::string name) {
-    return Map::tileset_names[std::filesystem::path{name}.stem().string()];
-}
-}  // namespace Tiled
+    void World::register_tileset(const char* name, const Tileset& tileset) {
+        tilesets[name] = tileset;
+    }
+
+    void World::register_texture(const char* name, size_t tex) {
+        textures[name] = tex;
+    }
+
+    size_t World::get_texture(std::string_view name) {
+        std::string name_no_ext = fs::path{name}.stem().string();
+        return textures[name_no_ext];
+    }
+
+    Tileset& World::get_tileset(std::string_view name) {
+        std::string name_no_ext = fs::path{name}.stem().string();
+        return tilesets[name_no_ext];
+    }
+
+};
