@@ -4,6 +4,7 @@
 #include <initializer_list>
 #include <stdexcept>
 #include <type_traits>
+#include "graphics/types.hpp"
 
 struct SDL_Window;
 
@@ -27,7 +28,7 @@ namespace OpenGL {
     public:
         /* The window must be created with SDL_WINDOW_OPENGL and
          * not already have an attached OpenGL context */
-        Context(SDL_Window* window, int major = 4, int minor = 5, bool core = true);
+        Context(SDL_Window* window, int major = 4, int minor = 5, bool core = true, float samples = 4);
         void bind();
 
         static void wireframe(bool enable);
@@ -266,6 +267,7 @@ namespace OpenGL {
     public:
         enum Type : unsigned int {
             tex2d = 0x0DE1,
+            tex2d_msa = 0x9100,
             tex3d = 0x806F,
             texarr2d = 0x8C1A,
         };
@@ -291,7 +293,7 @@ namespace OpenGL {
         Texture(Type type, const uint8_t data[], size_t length);
         Texture(Type type, const uint8_t data[], size_t length, int level);
         Texture(Type type, unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
-        Texture(Type type, unsigned int width, unsigned int height, unsigned int depth,
+        Texture(Type type, unsigned int width, unsigned int height, unsigned int depth_or_msa_samples,
                 Format fmt = format<8>(Format::RGBA));
         Texture(const Textures::asset_t& texture);
         Texture(Texture&&);
@@ -306,6 +308,7 @@ namespace OpenGL {
         void store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y, int offset_z);
         void alloc(unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
         void alloc(unsigned int width, unsigned int height, unsigned int depth, Format fmt = format<8>(Format::RGBA));
+        void alloc_msa(unsigned int width, unsigned int height, unsigned int samples, Format fmt = format<8>(Format::RGBA));
 
         void set_wrap_x(Wrap);
         void set_wrap_y(Wrap);
@@ -356,12 +359,16 @@ namespace OpenGL {
         void destroy();
 
         void bind();
+        void bind_read();
+        void bind_draw();
         void unbind();
 
         void attach(Attachment attachment, Renderbuffer& buffer);
         void attach(unsigned int color_attachment, Renderbuffer& buffer);
         void attach(Attachment attachment, Texture& buffer);
         void attach(unsigned int color_attachment, Texture& buffer);
+
+        void blit(const Framebuffer& fbo, Render::Rect src, Render::Rect dest, Texture::Filter);
     };
 
 }

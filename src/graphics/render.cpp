@@ -129,6 +129,7 @@ namespace Render {
         this->vao.vert_attr<int[2]>(2, offsetof(Quad, tex_coords) + offsetof(Rect, w));
         this->vao.vert_attr<unsigned int[1]>(3, offsetof(Quad, tex));
         this->vao.vert_attr<unsigned int[1]>(4, offsetof(Quad, flags));
+        this->vao.vert_attr<float[1]>(5, offsetof(Quad, rot));
 
         this->light_vao.create();
         this->light_vao.attach_ebo();
@@ -149,8 +150,8 @@ namespace Render {
         OpenGL::Context::blending(true);
     }
 
-    void BatchRenderer::push(const Vec2& pos, const Rect& coords, size_t tex, unsigned int flags) {
-        this->quads.emplace_back(pos, coords, tex, flags);
+    void BatchRenderer::push(const Vec2& pos, const Rect& coords, size_t tex, float rot, unsigned int flags) {
+        this->quads.emplace_back(pos, coords, tex, flags, rot);
     }
 
     void BatchRenderer::push(const Vec2& pos, const Color& color, unsigned int radius, float intensity, float decay_rate) {

@@ -9,6 +9,7 @@ patch in ivec2 tex_xy;
 patch in ivec2 tex_wh;
 patch in uint tex;
 patch in uint flags;
+patch in float rot;
 
 flat out uint tex_id;
 out vec2 tex_coords;
@@ -24,8 +25,15 @@ layout(std140) uniform canvas_block {
 
 void main() {
     vec2 vert = gl_TessCoord.xy;
-    vec2 pos = gl_in[0].gl_Position.xy;
-    pos += vert * tex_wh - camera * zoom + (canvas * zoom) / 2;
+    vec2 origin = gl_in[0].gl_Position.xy + tex_wh/2.0;
+    vec2 pos = gl_in[0].gl_Position.xy + vert * tex_wh;
+
+    float angle = radians(rot);
+    mat2 rotation = mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+    pos = rotation * (pos - origin) + origin;
+
+
+    pos += - camera * zoom + (canvas * zoom) / 2;
     pos *= 2.0 / (canvas * zoom);
     pos -= 1;
     pos.y *= -1;

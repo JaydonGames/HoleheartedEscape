@@ -5,11 +5,13 @@ in ivec2 vert_tex_xy[];
 in ivec2 vert_tex_wh[];
 in uint vert_tex[];
 in uint vert_flags[];
+in float vert_rotation[];
 
 patch out ivec2 tex_xy;
 patch out ivec2 tex_wh;
 patch out uint tex;
 patch out uint flags;
+patch out float rot;
 
 void main() {
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
@@ -17,6 +19,7 @@ void main() {
     tex_wh = vert_tex_wh[0];
     tex = vert_tex[0];
     flags = vert_flags[0];
+    rot = vert_rotation[0];
 
     gl_TessLevelOuter[0] = 1;
     gl_TessLevelOuter[1] = 1;

@@ -34,17 +34,21 @@ namespace OpenGL {
 
     bool Context::debug = false;
 
-    Context::Context(SDL_Window *window, int major, int minor, bool core)
+    Context::Context(SDL_Window *window, int major, int minor, bool core, float samples)
         : window(window) {
         if (Context::debug)
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+        SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, samples);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                             core ? SDL_GL_CONTEXT_PROFILE_CORE : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+
         this->context = SDL_GL_CreateContext(window);
         if (!this->context)
             throw InitError{SDL_GetError()};
+
         ::glewExperimental = true;
         unsigned int err = glewInit();
         if (err)
@@ -56,6 +60,8 @@ namespace OpenGL {
             glDebugMessageCallback(opengl_debug_out, nullptr);
             glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
         }
+
+        glEnable(GL_MULTISAMPLE);
     }
 
     void Context::wireframe(bool enable) {
@@ -485,6 +491,14 @@ namespace OpenGL {
         this->alloc(width, height, format);
     }
 
+    Texture::Texture(Type type, unsigned int width, unsigned int height, unsigned int depth, Format format) {
+        this->create(type);
+        if (type == tex2d_msa)
+            this->alloc_msa(width, height, depth, format);
+        else
+            this->alloc(width, height, depth, format);
+    }
+
     Texture::Texture(const Textures::asset_t &texture)
         : Texture(tex2d, texture.data, texture.length) {}
 
@@ -566,6 +580,13 @@ namespace OpenGL {
         glTextureStorage3D(this->id, 1, format.to_opengl(), this->w, this->h, this->d);
     }
 
+    void Texture::alloc_msa(unsigned int width, unsigned int height, unsigned int samples, Format format) {
+        this->w = width;
+        this->h = height;
+        this->d = 1;
+        glTextureStorage2DMultisample(this->id, samples, format.to_opengl(), this->w, this->h, true);
+    }
+
     void Texture::set_wrap_x(Wrap wrap) {
         glTextureParameteri(this->id, GL_TEXTURE_WRAP_S, wrap);
     }
@@ -619,6 +640,14 @@ namespace OpenGL {
         glBindFramebuffer(GL_FRAMEBUFFER, this->id);
     }
 
+    void Framebuffer::bind_read() {
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, this->id);
+    }
+
+    void Framebuffer::bind_draw() {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, this->id);
+    }
+
     void Framebuffer::unbind() {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
@@ -637,6 +666,11 @@ namespace OpenGL {
 
     void Framebuffer::attach(unsigned int attachment, Texture &buffer) {
         glNamedFramebufferTexture(this->id, COLOR + attachment, buffer.get(), 0);
+    }
+
+    void Framebuffer::blit(const Framebuffer &fbo, Render::Rect src, Render::Rect dest, Texture::Filter filter) {
+        glBlitNamedFramebuffer(fbo.id, this->id, src.x, src.y, src.x + src.w, src.y + src.h, dest.x, dest.y,
+                               dest.x + dest.w, dest.y + dest.h, GL_COLOR_BUFFER_BIT, filter);
     }
 
 }

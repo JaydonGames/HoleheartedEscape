@@ -39,9 +39,11 @@ int main() {
     context.set_clear_color(0, 0, 0);
     context.enable_vsync();
 
-    OpenGL::Framebuffer &fbo = canvas.fbo;
-    OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT, OpenGL::format<8>(OpenGL::Format::RGBA)};
-    OpenGL::Texture object_opengl_tex{OpenGL::Texture::tex2d, Textures::objects.data, Textures::objects.length};
+    OpenGL::Texture color_msa{OpenGL::Texture::tex2d_msa, SCREEN_WIDTH, SCREEN_HEIGHT, 4};
+    OpenGL::Texture color{OpenGL::Texture::tex2d, SCREEN_WIDTH, SCREEN_HEIGHT};
+    canvas.fbo.create();
+    canvas.fbo.attach(0, color_msa);
+    OpenGL::Framebuffer fbo;
     fbo.create();
     fbo.attach(0, color);
 
@@ -113,21 +115,21 @@ int main() {
         // Updating
         engine.update(dt);
 
-        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, Render::NoSelfShadows);
+        renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0, Render::NoSelfShadows);
         for (auto &layer : test_map.layers) {
             for (int y = 0; y < layer.tiles.size(); ++y) {
                 for (int x = 0; x < layer.tiles[y].size(); ++x) {
                     Tiled::Tile *tile = layer.tiles[y][x].tile;
                     if (!tile)
                         continue;
-                    renderer.push({x * tile->coords.w, y * tile->coords.h}, tile->coords, tile->tex,
+                    renderer.push({x * tile->coords.w, y * tile->coords.h}, tile->coords, tile->tex, 0,
                                   layer.tiles[y][x].flags);
                 }
             }
         }
 
         Render::Vector2D player_curr_position = player.get_curr_position();
-        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0);
+        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0, 0);
         // std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
         // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
@@ -140,7 +142,7 @@ int main() {
         // std::cout << '\n';
 
         Render::Vector2D object_curr_position = object.get_curr_position();
-        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0);
+        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0, 0);
 
         // Light
         const uint8_t* keystate = SDL_GetKeyboardState(NULL);
@@ -153,7 +155,7 @@ int main() {
         if (keystate[SDL_SCANCODE_D])
             ++light.x;
 
-        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.5f, 0.9f);
+        //renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.5f, 0.9f);
         
         // Rendering
         camera.use();
@@ -165,6 +167,7 @@ int main() {
         int offset_x = (screen.x * zoom - canvas.x) / 2, offset_y = (screen.y * zoom - canvas.y) / 2;
         screen_camera.set(screen.x / 2, screen.y / 2, zoom);
 
+        fbo.blit(canvas.fbo, {0, 0, int(canvas.x), int(canvas.y)}, {0, 0, int(canvas.x), int(canvas.y)}, OpenGL::Texture::linear);
         fbo_renderer.clear(screen);
         fbo_renderer.render(screen, {offset_x, offset_y}, {0, 0, int(canvas.x), int(canvas.y)}, color);
         context.swap_buffer();
