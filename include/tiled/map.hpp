@@ -17,7 +17,7 @@ namespace Tiled {
     };
 
     struct Tile {
-        Render::Rect coords;
+        Math::Rect coords;
         size_t tex;
     };
 

@@ -6,20 +6,20 @@
 #include <iostream>
 #include <memory>
 
-VerletParticle::VerletParticle(Render::Vector2D pos, bool is_static)
+VerletParticle::VerletParticle(Math::Vec2<float> pos, bool is_static)
     : curr_position(pos),
       prev_position(pos),
       is_static(is_static) {};
 
 void VerletParticle::update_position(double dt) {
-    const Render::Vector2D displacment = curr_position - prev_position;
+    const Math::Vec2<float> displacment = curr_position - prev_position;
     prev_position = curr_position;
     curr_position = curr_position + displacment + acceleration * dt * dt;
 
-    acceleration = Render::Vector2D();
+    acceleration = Math::Vec2<float>();
 }
 
-void VerletParticle::accelerate(Render::Vector2D a) {
+void VerletParticle::accelerate(Math::Vec2<float> a) {
     acceleration = acceleration + a;
 }
 
@@ -44,12 +44,12 @@ bool Projection::do_flip_direction(Projection& other) {
     return max - other.min < other.max - min;
 }
 
-Square::Square(Render::Vector2D pos, float side_length, bool is_static)
+Square::Square(Math::Vec2<float> pos, float side_length, bool is_static)
     : is_static(is_static),
       side_length(side_length),
-      m_vertices{VerletParticle(pos, is_static), VerletParticle(pos + Render::Vector2D(side_length, 0), is_static),
-                 VerletParticle(pos + Render::Vector2D(side_length, side_length), is_static),
-                 VerletParticle(pos + Render::Vector2D(0, side_length), is_static)},
+      m_vertices{VerletParticle(pos, is_static), VerletParticle(pos + Math::Vec2<float>(side_length, 0), is_static),
+                 VerletParticle(pos + Math::Vec2<float>(side_length, side_length), is_static),
+                 VerletParticle(pos + Math::Vec2<float>(0, side_length), is_static)},
       m_constraints{
           Constraint(0, 1, side_length),
           Constraint(1, 2, side_length),
@@ -78,12 +78,12 @@ Square& Square::operator=(Square&& other) noexcept {
     return *this;
 }
 
-Render::Vector2D Square::get_curr_position() {
+Math::Vec2<float> Square::get_curr_position() {
     return m_vertices[0].curr_position;
 }
 
-Render::Vector2D Square::get_center_position() {
-    return m_vertices[0].curr_position + Render::Vector2D(side_length / 2, side_length / 2);
+Math::Vec2<float> Square::get_center_position() {
+    return m_vertices[0].curr_position + Math::Vec2<float>(side_length / 2, side_length / 2);
 }
 
 std::array<VerletParticle*, 4> Square::get_particles() {
@@ -102,21 +102,21 @@ std::array<Constraint*, 6> Square::get_constraints() {
     return ptrs;
 }
 
-std::array<Render::Vector2D, 2> Square::get_axes() {
-    std::array<Render::Vector2D, 2> axes;
+std::array<Math::Vec2<float>, 2> Square::get_axes() {
+    std::array<Math::Vec2<float>, 2> axes;
     for (int i = 0; i < 2; ++i) {
         VerletParticle p1 = m_vertices[i];
         VerletParticle p2 = m_vertices[i + 1];
 
-        Render::Vector2D edge = p1.curr_position - p2.curr_position;
-        Render::Vector2D normal = edge.get_perpendicular().normalize();
+        Math::Vec2<float> edge = p1.curr_position - p2.curr_position;
+        Math::Vec2<float> normal = edge.get_perpendicular().normalize();
 
         axes[i] = normal;
     }
     return axes;
 }
 
-Projection Square::project(Render::Vector2D axis) {
+Projection Square::project(Math::Vec2<float> axis) {
     double min = m_vertices[0].curr_position.dot_product(axis);
     double max = min;
     for (VerletParticle& particle : m_vertices) {
@@ -131,7 +131,7 @@ Projection Square::project(Render::Vector2D axis) {
     return proj;
 }
 
-void Square::accelerate(Render::Vector2D a) {
+void Square::accelerate(Math::Vec2<float> a) {
     for (VerletParticle& p : m_vertices) {
         p.accelerate(a);
     }

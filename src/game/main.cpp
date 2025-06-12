@@ -22,7 +22,7 @@ constexpr double SCREEN_TICK_PER_FRAME = 1000 / SCREEN_FPS;
 
 // TODO: Modularize this (Aydon help)
 int main() {
-    constexpr Render::Vec2 start_size{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
+    Math::Vec2<int> start_size{SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2};
 
     SDL_SetMainReady();
     SDL_Init(SDL_INIT_VIDEO);
@@ -47,7 +47,7 @@ int main() {
     fbo.create();
     fbo.attach(0, color);
 
-    Render::Vec2 light{int(0.25 * canvas.x / 2), int(0.25 * canvas.y / 2)};
+    Math::Vec2 light{int(0.25 * canvas.x / 2), int(0.25 * canvas.y / 2)};
 
     Render::TextureGroup textures;
     size_t bg = textures.push_back(Textures::background);
@@ -63,10 +63,10 @@ int main() {
 
     PhysicsWorld engine;
 
-    Player player{Render::Vector2D(64, 160)};
+    Player player{Math::Vec2<float>(64, 160)};
     engine.add_square(&player);
 
-    Square object{Render::Vector2D(80, 224), 16.0f};
+    Square object{Math::Vec2<float>(80, 224), 16.0f};
     engine.add_square(&object);
 
     Tiled::Layer collision_layer = test_map[0];
@@ -75,7 +75,7 @@ int main() {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
             if (!collision_layer.tiles[y][x].tile)
                 continue;
-            collision_tiles.emplace_back(Render::Vector2D(x * 16, y * 16), 16.0f, true);
+            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), 16.0f, true);
             engine.add_square(&collision_tiles.back());
         }
     }
@@ -128,7 +128,7 @@ int main() {
             }
         }
 
-        Render::Vector2D player_curr_position = player.get_curr_position();
+        Math::Vec2<float> player_curr_position = player.get_curr_position();
         renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0, 0);
 
         // std::array<VerletParticle *, 4> parts = player.get_particles();
@@ -142,7 +142,7 @@ int main() {
         // std::cout << "3y: " << parts[3]->curr_position.y << '\n';
         // std::cout << '\n';
 
-        Render::Vector2D object_curr_position = object.get_curr_position();
+        Math::Vec2<float> object_curr_position = object.get_curr_position();
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0, 0);
 
         // Light
@@ -156,7 +156,7 @@ int main() {
         if (keystate[SDL_SCANCODE_D])
             ++light.x;
 
-        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y / 2, 0.5f, 0.9f);
+        renderer.push(light, Math::Color{0.977f, 0.848f, 0.7f}, canvas.y / 2, 0.5f, 0.9f);
 
         // Rendering
         camera.use();

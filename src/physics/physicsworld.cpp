@@ -10,7 +10,7 @@
 #include <iostream>
 
 PhysicsWorld::PhysicsWorld() {
-    m_gravity = Render::Vector2D(0, 500.0f);
+    m_gravity = Math::Vec2<float>(0, 500.0f);
 };
 
 void PhysicsWorld::add_square(Square* square) {
@@ -71,7 +71,7 @@ void PhysicsWorld::satisfy_constraints() {
                     continue;
                 }
 
-                Render::Vector2D delta = p2->curr_position - p1->curr_position;
+                Math::Vec2<float> delta = p2->curr_position - p1->curr_position;
                 float delta_length = std::sqrt(delta.dot_product(delta));
                 float diff = (delta_length - c->rest_length) / delta_length;
 
@@ -91,11 +91,11 @@ void PhysicsWorld::satisfy_constraints() {
 void PhysicsWorld::solve_collisions() {
     for (int j = 0; j < m_squares.size(); ++j) {
         Square* square_1 = m_squares[j];
-        std::array<Render::Vector2D, 2> axes_1 = square_1->get_axes();
+        std::array<Math::Vec2<float>, 2> axes_1 = square_1->get_axes();
         for (int i = (j + 1); i < m_squares.size(); ++i) {
             bool is_collide = true;
             Square* square_2 = m_squares[i];
-            std::array<Render::Vector2D, 2> axes_2 = square_2->get_axes();
+            std::array<Math::Vec2<float>, 2> axes_2 = square_2->get_axes();
 
             /*
              NOTE: The normal or depth does not indicate which direction
@@ -104,10 +104,10 @@ void PhysicsWorld::solve_collisions() {
              depending on where the projections overlap
             */
             double depth = 9999999;
-            Render::Vector2D normal;
+            Math::Vec2<float> normal;
             bool do_flip_direction;
 
-            for (Render::Vector2D axis : axes_1) {
+            for (Math::Vec2<float> axis : axes_1) {
                 Projection p1 = square_1->project(axis);
                 Projection p2 = square_2->project(axis);
 
@@ -127,7 +127,7 @@ void PhysicsWorld::solve_collisions() {
             if (!is_collide)
                 continue;
 
-            for (Render::Vector2D axis : axes_2) {
+            for (Math::Vec2<float> axis : axes_2) {
                 Projection p1 = square_1->project(axis);
                 Projection p2 = square_2->project(axis);
 
@@ -157,7 +157,7 @@ void PhysicsWorld::solve_collisions() {
     }
 }
 
-void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, Render::Vector2D normal, double depth) {
+void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, Math::Vec2<float> normal, double depth) {
     if (object_1->is_static) {
         for (VerletParticle* particle : object_2->get_particles()) {
             particle->curr_position = particle->curr_position + normal * (depth / 1.50f);

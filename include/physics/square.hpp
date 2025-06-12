@@ -5,16 +5,16 @@
 #include "graphics/types.hpp"
 
 struct VerletParticle {
-    Render::Vector2D curr_position;
-    Render::Vector2D prev_position;
-    Render::Vector2D acceleration;
+    Math::Vec2<float> curr_position;
+    Math::Vec2<float> prev_position;
+    Math::Vec2<float> acceleration;
     bool is_static;
 
-    VerletParticle(Render::Vector2D curr_pos, bool is_static = false);
+    VerletParticle(Math::Vec2<float> curr_pos, bool is_static = false);
 
     void update_position(double dt);
 
-    void accelerate(Render::Vector2D a);
+    void accelerate(Math::Vec2<float> a);
 };
 
 struct Constraint {
@@ -42,25 +42,25 @@ public:
     float side_length;
     float diagonal_length;
 
-    Square(Render::Vector2D pos, float side_length = 16.0f, bool is_static = false);
+    Square(Math::Vec2<float> pos, float side_length = 16.0f, bool is_static = false);
 
     Square(Square&& other) noexcept;
 
     Square& operator=(Square&& other) noexcept;
 
-    Render::Vector2D get_curr_position();
+    Math::Vec2<float> get_curr_position();
 
-    Render::Vector2D get_center_position();
+    Math::Vec2<float> get_center_position();
 
     std::array<VerletParticle*, 4> get_particles();
 
     std::array<Constraint*, 6> get_constraints();
 
-    std::array<Render::Vector2D, 2> get_axes();
+    std::array<Math::Vec2<float>, 2> get_axes();
 
-    Projection project(Render::Vector2D axis);
+    Projection project(Math::Vec2<float> axis);
 
-    void accelerate(Render::Vector2D a);
+    void accelerate(Math::Vec2<float> a);
 
 private:
     std::array<VerletParticle, 4> m_vertices;

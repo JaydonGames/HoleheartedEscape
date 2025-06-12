@@ -124,7 +124,7 @@ namespace Tiled {
 
         for (size_t i = 0; i < tile_count; ++i) {
             int x = i % column_count, y = size_t(i / column_count);
-            this->tiles.emplace_back(Render::Rect{x * tile_width, y * tile_height, tile_width, tile_height},
+            this->tiles.emplace_back(Math::Rect{x * tile_width, y * tile_height, tile_width, tile_height},
                                      world->get_texture(image_file));
         }
     }

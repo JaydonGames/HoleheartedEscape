@@ -6,11 +6,11 @@
 #include <iostream>
 #include <utility>
 
-Render::Vector2D Player::PLAYER_JUMP_FORCE;
+Math::Vec2<float> Player::PLAYER_JUMP_FORCE;
 
-Player::Player(Render::Vector2D pos)
+Player::Player(Math::Vec2<float> pos)
     : Square(pos) {
-    PLAYER_JUMP_FORCE = Render::Vector2D(0, -15000.0f);
+    PLAYER_JUMP_FORCE = Math::Vec2<float>(0, -15000.0f);
     is_jumping = false;
 };
 
@@ -22,10 +22,10 @@ void Player::input() {
     }
 
     if (keystate[SDL_SCANCODE_LEFT]) {
-        accelerate(Render::Vector2D(-PLAYER_SPD, 0));
+        accelerate(Math::Vec2<float>(-PLAYER_SPD, 0));
     }
 
     if (keystate[SDL_SCANCODE_RIGHT]) {
-        accelerate(Render::Vector2D(PLAYER_SPD, 0));
+        accelerate(Math::Vec2<float>(PLAYER_SPD, 0));
     }
 }

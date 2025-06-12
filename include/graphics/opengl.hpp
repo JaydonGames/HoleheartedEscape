@@ -308,7 +308,8 @@ namespace OpenGL {
         void store(const uint8_t data[], int width, int height, int depth, int offset_x, int offset_y, int offset_z);
         void alloc(unsigned int width, unsigned int height, Format fmt = format<8>(Format::RGBA));
         void alloc(unsigned int width, unsigned int height, unsigned int depth, Format fmt = format<8>(Format::RGBA));
-        void alloc_msa(unsigned int width, unsigned int height, unsigned int samples, Format fmt = format<8>(Format::RGBA));
+        void alloc_msa(unsigned int width, unsigned int height, unsigned int samples,
+                       Format fmt = format<8>(Format::RGBA));
 
         void set_wrap_x(Wrap);
         void set_wrap_y(Wrap);
@@ -368,7 +369,7 @@ namespace OpenGL {
         void attach(Attachment attachment, Texture& buffer);
         void attach(unsigned int color_attachment, Texture& buffer);
 
-        void blit(const Framebuffer& fbo, Render::Rect src, Render::Rect dest, Texture::Filter);
+        void blit(const Framebuffer& fbo, Math::Rect src, Math::Rect dest, Texture::Filter);
     };
 
 }

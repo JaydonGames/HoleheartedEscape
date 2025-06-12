@@ -9,7 +9,7 @@ public:
 
     ObjectTest(int x, int y, Tiled::Layer collision_layer);
 
-    Render::Rect get_rect();
+    Math::Rect get_rect();
 
     void update(double dt);
 
@@ -18,7 +18,7 @@ public:
     double m_vel_x, m_vel_y, m_gravity, m_acceleration;
 
 private:
-    Render::Rect m_rect;
+    Math::Rect m_rect;
 
     Tiled::Layer collision_layer;
 

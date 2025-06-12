@@ -668,7 +668,7 @@ namespace OpenGL {
         glNamedFramebufferTexture(this->id, COLOR + attachment, buffer.get(), 0);
     }
 
-    void Framebuffer::blit(const Framebuffer &fbo, Render::Rect src, Render::Rect dest, Texture::Filter filter) {
+    void Framebuffer::blit(const Framebuffer &fbo, Math::Rect src, Math::Rect dest, Texture::Filter filter) {
         glBlitNamedFramebuffer(fbo.id, this->id, src.x, src.y, src.x + src.w, src.y + src.h, dest.x, dest.y,
                                dest.x + dest.w, dest.y + dest.h, GL_COLOR_BUFFER_BIT, filter);
     }

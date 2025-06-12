@@ -1,51 +1,49 @@
 #pragma once
 
 #include <cmath>
-namespace Render {
+namespace Math {
+    
+    template<typename T>
     struct Vec2 {
-            int x, y;
-    };
-
-    struct Vector2D {
-            float x, y;
-            Vector2D(float x = 0, float y = 0) : x(x), y(y) {}
-            Vector2D operator+(const Vector2D& other) const {
-                return Vector2D(x + other.x, y + other.y);
+            T x, y;
+            Vec2(T x = 0, T y = 0) : x(x), y(y) {}
+            Vec2 operator+(const Vec2& other) const {
+                return Vec2(x + other.x, y + other.y);
             }
 
-            Vector2D operator-(const Vector2D& other) const {
-                return Vector2D(x - other.x, y - other.y);
+            Vec2 operator-(const Vec2& other) const {
+                return Vec2(x - other.x, y - other.y);
             }
 
-            Vector2D operator*(float scalar) const {
-                return Vector2D(x * scalar, y * scalar);
+            Vec2 operator*(T scalar) const {
+                return Vec2(x * scalar, y * scalar);
             }
 
-            Vector2D operator/(float scalar) const {
-                return Vector2D(x / scalar, y / scalar);
+            Vec2 operator/(T scalar) const {
+                return Vec2(x / scalar, y / scalar);
             }
 
-            float dot_product(const Vector2D& other) const {
-                return float(x * other.x + y * other.y);
+            T dot_product(const Vec2& other) const {
+                return T(x * other.x + y * other.y);
             }
 
-            friend inline Vector2D operator*(float scalar, const Vector2D vec) {
+            friend inline Vec2 operator*(T scalar, const Vec2 vec) {
                 return vec * scalar;
             }
 
-            Vector2D get_perpendicular() const {
-                return Vector2D(-y, x);
+            Vec2 get_perpendicular() const {
+                return Vec2(-y, x);
             }
 
-            Vector2D normalize() {
+            Vec2 normalize() {
                 double mag_sq = x * x + y * y;
                 if (mag_sq == 0.0) {
-                    return Vector2D(0.0, 0.0);
+                    return Vec2(0.0, 0.0);
                 }
 
-                float inv_mag = 1.0 / std::sqrt(mag_sq);
+                T inv_mag = 1.0 / std::sqrt(mag_sq);
 
-                return Vector2D(x * inv_mag, y * inv_mag);
+                return Vec2(x * inv_mag, y * inv_mag);
             }
     };
 

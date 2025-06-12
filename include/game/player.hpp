@@ -10,10 +10,10 @@
 // add friction and drag to all objects
 class Player : public Square {
 public:
-    static Render::Vector2D PLAYER_JUMP_FORCE;
+    static Math::Vec2<float> PLAYER_JUMP_FORCE;
     static constexpr int PLAYER_SPD = 2500;
 
-    Player(Render::Vector2D pos);
+    Player(Math::Vec2<float> pos);
 
     void input();
 

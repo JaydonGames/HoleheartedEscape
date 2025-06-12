@@ -55,7 +55,7 @@ void ObjectTest::move(double dt) {
     do_layer_collision("horizontal");
 }
 
-Render::Rect ObjectTest::get_rect() {
+Math::Rect ObjectTest::get_rect() {
     return m_rect;
 }
 

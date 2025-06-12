@@ -70,8 +70,8 @@ namespace Render {
     class BatchRenderer {
     public:
         BatchRenderer();
-        void push(const Vec2& pos, const Rect& tex_coords, size_t tex, float rotation = 0, unsigned int flags = 0);
-        void push(const Vec2& pos, const Color& color, unsigned int radius, float intensity, float decay_rate);
+        void push(const Math::Vec2<int>& pos, const Math::Rect& tex_coords, size_t tex, float rotation = 0, unsigned int flags = 0);
+        void push(const Math::Vec2<int>& pos, const Math::Color& color, unsigned int radius, float intensity, float decay_rate);
         void render(Canvas& canvas, TextureGroup& textures);
         void clear(Canvas& canvas);
 
@@ -81,18 +81,18 @@ namespace Render {
         OpenGL::VertexArray vao, light_vao;
 
         struct Quad {
-            Vec2 pos;
-            Rect tex_coords;
+        Math::Vec2<int> pos;
+        Math::Rect tex_coords;
             unsigned int tex, flags;
             float rot;
         };
 
         struct Light {
-            Vec2 pos;
+        Math::Vec2<int> pos;
             unsigned int radius;
             float intensity, decay_rate;
             float p1, p2, p3;
-            Color color;
+        Math::Color color;
         };
 
         std::vector<Quad> quads;
@@ -102,7 +102,7 @@ namespace Render {
     class SimpleRenderer {
     public:
         SimpleRenderer();
-        void render(Canvas& canvas, const Vec2& pos, const Rect& tex_coords, OpenGL::Texture& tex,
+        void render(Canvas& canvas, const Math::Vec2<int>& pos, const Math::Rect& tex_coords, OpenGL::Texture& tex,
                     unsigned int flags = 0);
         void clear(Canvas& canvas);
 

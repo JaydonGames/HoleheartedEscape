@@ -14,7 +14,7 @@ class PhysicsWorld {
 
     private:
         std::vector<Square*> m_squares;
-        Render::Vector2D m_gravity;
+        Math::Vec2<float> m_gravity;
 
         void update_positions(double dt);
 
@@ -24,5 +24,5 @@ class PhysicsWorld {
 
         void solve_collisions();
 
-        void resolve_collision(auto& object_1, auto& object_2, Render::Vector2D normal, double depth);
+        void resolve_collision(auto& object_1, auto& object_2, Math::Vec2<float> normal, double depth);
 };
