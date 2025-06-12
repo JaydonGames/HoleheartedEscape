@@ -18,7 +18,7 @@ class PhysicsWorld {
 
         void update_positions(double dt);
 
-        void apply_gravity(double dt);
+        void apply_gravity();
 
         void satisfy_constraints();
 

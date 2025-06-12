@@ -47,7 +47,7 @@ int main() {
     fbo.create();
     fbo.attach(0, color);
 
-    Render::Vec2 light{int(0.25*canvas.x/2), int(0.25*canvas.y/2)};
+    Render::Vec2 light{int(0.25 * canvas.x / 2), int(0.25 * canvas.y / 2)};
 
     Render::TextureGroup textures;
     size_t bg = textures.push_back(Textures::background);
@@ -109,8 +109,8 @@ int main() {
             }
         }
         player.input();
-        std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
-        std::cout << "y: " << player.get_particles()[0]->acceleration.y << "\n\n";
+        // std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
+        // std::cout << "y: " << player.get_particles()[0]->acceleration.y << "\n\n";
 
         // Updating
         engine.update(dt);
@@ -130,7 +130,8 @@ int main() {
 
         Render::Vector2D player_curr_position = player.get_curr_position();
         renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0, 0);
-        // std::array<VerletParticle *, 4> parts = engine.get_square(player_index).get_particles();
+
+        // std::array<VerletParticle *, 4> parts = player.get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
         // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
         // std::cout << "1x: " << parts[1]->curr_position.x << '\n';
@@ -145,7 +146,7 @@ int main() {
         renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0, 0);
 
         // Light
-        const uint8_t* keystate = SDL_GetKeyboardState(NULL);
+        const uint8_t *keystate = SDL_GetKeyboardState(NULL);
         if (keystate[SDL_SCANCODE_W])
             --light.y;
         if (keystate[SDL_SCANCODE_S])
@@ -155,8 +156,8 @@ int main() {
         if (keystate[SDL_SCANCODE_D])
             ++light.x;
 
-        //renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y/2, 0.5f, 0.9f);
-        
+        renderer.push(light, Render::Color{0.977f, 0.848f, 0.7f}, canvas.y / 2, 0.5f, 0.9f);
+
         // Rendering
         camera.use();
         renderer.clear(canvas);
@@ -167,7 +168,8 @@ int main() {
         int offset_x = (screen.x * zoom - canvas.x) / 2, offset_y = (screen.y * zoom - canvas.y) / 2;
         screen_camera.set(screen.x / 2, screen.y / 2, zoom);
 
-        fbo.blit(canvas.fbo, {0, 0, int(canvas.x), int(canvas.y)}, {0, 0, int(canvas.x), int(canvas.y)}, OpenGL::Texture::linear);
+        fbo.blit(canvas.fbo, {0, 0, int(canvas.x), int(canvas.y)}, {0, 0, int(canvas.x), int(canvas.y)},
+                 OpenGL::Texture::linear);
         fbo_renderer.clear(screen);
         fbo_renderer.render(screen, {offset_x, offset_y}, {0, 0, int(canvas.x), int(canvas.y)}, color);
         context.swap_buffer();

@@ -26,14 +26,15 @@ void PhysicsWorld::update(double dt) {
     const int sub_steps = 8;
     const float sub_dt = dt / (float)sub_steps;
     for (int i = sub_steps; i > 0; i--) {
-        apply_gravity(sub_dt);
+        apply_gravity();
         satisfy_constraints();
         solve_collisions();
+        satisfy_constraints();
         update_positions(sub_dt);
     }
 }
 
-void PhysicsWorld::apply_gravity(double dt) {
+void PhysicsWorld::apply_gravity() {
     for (Square* square : m_squares) {
         if (!square->is_static) {
             square->accelerate(m_gravity);
@@ -57,20 +58,21 @@ void PhysicsWorld::satisfy_constraints() {
         if (square->is_static)
             continue;
 
-        std::array<Constraint*, 4> constraints = square->get_constraints();
+        std::array<Constraint*, 6> constraints = square->get_constraints();
         std::array<VerletParticle*, 4> particles = square->get_particles();
 
         for (int j = 0; j < 5; ++j) {
-            for (int i = 0; i < 4; ++i) {
+            for (int i = 0; i < 6; ++i) {
                 Constraint* c = constraints[i];
                 VerletParticle* p1 = particles[c->particle_a];
                 VerletParticle* p2 = particles[c->particle_b];
 
-                if (p1->is_static && p2->is_static)
+                if (p1->is_static && p2->is_static) {
                     continue;
+                }
 
                 Render::Vector2D delta = p2->curr_position - p1->curr_position;
-                float delta_length = std::sqrt(abs(delta.dot_product(delta)));
+                float delta_length = std::sqrt(delta.dot_product(delta));
                 float diff = (delta_length - c->rest_length) / delta_length;
 
                 if (p1->is_static) {

@@ -2,16 +2,20 @@
 #include "physics/square.hpp"
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iostream>
 #include <memory>
 
 VerletParticle::VerletParticle(Render::Vector2D pos, bool is_static)
-    : curr_position(pos), prev_position(pos), is_static(is_static) {};
+    : curr_position(pos),
+      prev_position(pos),
+      is_static(is_static) {};
 
 void VerletParticle::update_position(double dt) {
     const Render::Vector2D displacment = curr_position - prev_position;
     prev_position = curr_position;
     curr_position = curr_position + displacment + acceleration * dt * dt;
+
     acceleration = Render::Vector2D();
 }
 
@@ -19,9 +23,14 @@ void VerletParticle::accelerate(Render::Vector2D a) {
     acceleration = acceleration + a;
 }
 
-Constraint::Constraint(int a, int b, float l) : particle_a(a), particle_b(b), rest_length(l) {};
+Constraint::Constraint(int a, int b, float l)
+    : particle_a(a),
+      particle_b(b),
+      rest_length(l) {};
 
-Projection::Projection(float min, float max) : min(min), max(max) {};
+Projection::Projection(float min, float max)
+    : min(min),
+      max(max) {};
 
 bool Projection::is_overlap(Projection& other) {
     return max >= other.min && other.max >= min;
@@ -46,10 +55,15 @@ Square::Square(Render::Vector2D pos, float side_length, bool is_static)
           Constraint(1, 2, side_length),
           Constraint(2, 3, side_length),
           Constraint(3, 0, side_length),
+
+          // Diagonal constrainsts
+          Constraint(0, 2, sqrt(2 * (side_length * side_length))),
+          Constraint(1, 3, sqrt(2 * (side_length * side_length))),
       } {}
 
 Square::Square(Square&& other) noexcept
-    : m_vertices(std::move(other.m_vertices)), m_constraints(std::move(other.m_constraints)) {
+    : m_vertices(std::move(other.m_vertices)),
+      m_constraints(std::move(other.m_constraints)) {
     side_length = other.side_length;
     is_static = other.is_static;
 }
@@ -80,9 +94,9 @@ std::array<VerletParticle*, 4> Square::get_particles() {
     return ptrs;
 }
 
-std::array<Constraint*, 4> Square::get_constraints() {
-    std::array<Constraint*, 4> ptrs;
-    for (int i = 0; i < 4; ++i) {
+std::array<Constraint*, 6> Square::get_constraints() {
+    std::array<Constraint*, 6> ptrs;
+    for (int i = 0; i < 6; ++i) {
         ptrs[i] = &m_constraints[i];
     }
     return ptrs;
