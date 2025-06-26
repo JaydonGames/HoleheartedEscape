@@ -31,6 +31,7 @@ int main() {
 
     OpenGL::Context::debug = true;
     OpenGL::Context context{window};
+    // Context::wireframe(true)
     Render::BatchRenderer renderer;
     Render::SimpleRenderer fbo_renderer;
     Render::Camera screen_camera, camera;
@@ -63,10 +64,10 @@ int main() {
 
     PhysicsWorld engine;
 
-    Player player{Math::Vec2<float>(64, 160)};
+    Player player{Math::Vec2<float>(64, 160), 5.0f};
     engine.add_square(&player);
 
-    Square object{Math::Vec2<float>(80, 224), 16.0f};
+    Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
     engine.add_square(&object);
 
     Tiled::Layer collision_layer = test_map[0];
@@ -75,7 +76,7 @@ int main() {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
             if (!collision_layer.tiles[y][x].tile)
                 continue;
-            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), 16.0f, true);
+            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
             engine.add_square(&collision_tiles.back());
         }
     }
@@ -129,7 +130,9 @@ int main() {
         }
 
         Math::Vec2<float> player_curr_position = player.get_curr_position();
-        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex, 0, 0);
+        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex,
+                      player.get_angle(), 0);
+        std::cout << "Angle: " << player.get_angle() << "\n";
 
         // std::array<VerletParticle *, 4> parts = player.get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
@@ -143,7 +146,8 @@ int main() {
         // std::cout << '\n';
 
         Math::Vec2<float> object_curr_position = object.get_curr_position();
-        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex, 0, 0);
+        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex,
+                      object.get_angle(), 0);
 
         // Light
         const uint8_t *keystate = SDL_GetKeyboardState(NULL);
