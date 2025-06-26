@@ -122,14 +122,14 @@ int main() {
                     Tiled::Tile *tile = layer.tiles[y][x].tile;
                     if (!tile)
                         continue;
-                    renderer.push({x * tile->coords.w, y * tile->coords.h}, tile->coords, tile->tex, 0,
+                    renderer.push({float(x * tile->coords.w), float(y * tile->coords.h)}, tile->coords, tile->tex, 0,
                                   layer.tiles[y][x].flags);
                 }
             }
         }
 
         Math::Vec2<float> player_curr_position = player.get_curr_position();
-        renderer.push({int(player_curr_position.x), int(player_curr_position.y)}, {0, 0, 16, 16}, player_tex,
+        renderer.push(player_curr_position, {0, 0, 16, 16}, player_tex,
                       player.get_angle(), 0);
         std::cout << "Angle: " << player.get_angle() << "\n";
 
@@ -145,7 +145,7 @@ int main() {
         // std::cout << '\n';
 
         Math::Vec2<float> object_curr_position = object.get_curr_position();
-        renderer.push({int(object_curr_position.x), int(object_curr_position.y)}, {0, 0, 16, 16}, object_tex,
+        renderer.push(object_curr_position, {0, 0, 16, 16}, object_tex,
                       object.get_angle(), 0);
 
         // Light

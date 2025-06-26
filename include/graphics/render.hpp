@@ -70,7 +70,7 @@ namespace Render {
     class BatchRenderer {
     public:
         BatchRenderer();
-        void push(const Math::Vec2<int>& pos, const Math::Rect& tex_coords, size_t tex, float rotation = 0, unsigned int flags = 0);
+        void push(const Math::Vec2<float>& pos, const Math::Rect& tex_coords, size_t tex, float rotation = 0, unsigned int flags = 0);
         void push(const Math::Vec2<int>& pos, const Math::Color& color, unsigned int radius, float intensity, float decay_rate);
         void render(Canvas& canvas, TextureGroup& textures);
         void clear(Canvas& canvas);
@@ -81,7 +81,7 @@ namespace Render {
         OpenGL::VertexArray vao, light_vao;
 
         struct Quad {
-        Math::Vec2<int> pos;
+        Math::Vec2<float> pos;
         Math::Rect tex_coords;
             unsigned int tex, flags;
             float rot;

@@ -1,6 +1,6 @@
 #version 430
 
-layout(location = 0) in ivec2 pos_in;
+layout(location = 0) in vec2 pos_in;
 layout(location = 1) in ivec2 tex_xy_in;
 layout(location = 2) in ivec2 tex_wh_in;
 layout(location = 3) in uint tex_in;

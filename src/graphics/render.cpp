@@ -150,7 +150,7 @@ namespace Render {
         OpenGL::Context::blending(true);
     }
 
-    void BatchRenderer::push(const Math::Vec2<int>& pos, const Math::Rect& coords, size_t tex, float rot, unsigned int flags) {
+    void BatchRenderer::push(const Math::Vec2<float>& pos, const Math::Rect& coords, size_t tex, float rot, unsigned int flags) {
         this->quads.emplace_back(pos, coords, tex, flags, rot);
     }
 
