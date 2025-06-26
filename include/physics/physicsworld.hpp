@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+#include <vector>
 #include "graphics/types.hpp"
 #include "square.hpp"
 
@@ -24,5 +26,7 @@ class PhysicsWorld {
 
         void solve_collisions();
 
-        void resolve_collision(auto& object_1, auto& object_2, Math::Vec2<float> normal, double depth);
+        void resolve_collision(auto& object_1, auto& object_2, std::vector<VerletParticle*> colliding_particles_1, std::vector<VerletParticle*> colliding_particles_2, Math::Vec2<float> normal, double depth);
+
+        std::vector<VerletParticle*> get_collision_particles(std::array<VerletParticle*, 4>, Math::Vec2<float> normal);
 };
