@@ -2,6 +2,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include "graphics/types.hpp"
@@ -27,7 +28,7 @@ void PhysicsWorld::update(double dt) {
     const float sub_dt = dt / (float)sub_steps;
     for (int i = sub_steps; i > 0; i--) {
         apply_gravity();
-        satisfy_constraints();
+        // satisfy_constraints();
         solve_collisions();
         satisfy_constraints();
         update_positions(sub_dt);
@@ -37,7 +38,7 @@ void PhysicsWorld::update(double dt) {
 void PhysicsWorld::apply_gravity() {
     for (Square* square : m_squares) {
         if (!square->is_static) {
-            square->accelerate(m_gravity);
+            square->apply_force(m_gravity);
         }
     }
 }
@@ -145,33 +146,58 @@ void PhysicsWorld::solve_collisions() {
                 }
             }
 
-            if (!is_collide)
-                continue;
-
-            if (do_flip_direction) {
-                depth = depth * -1.0f;
+            if (is_collide) {
+                if (do_flip_direction) {
+                    depth = depth * -1.0f;
+                }
+                std::vector<VerletParticle*> colliding_particles_1 =
+                    get_collision_particles(square_1->get_particles(), -normal);
+                std::vector<VerletParticle*> colliding_particles_2 =
+                    get_collision_particles(square_2->get_particles(), normal);
+                resolve_collision(square_1, square_2, colliding_particles_1, colliding_particles_2, normal, depth);
             }
-
-            resolve_collision(square_1, square_2, normal, depth);
         }
     }
 }
 
-void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, Math::Vec2<float> normal, double depth) {
+void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector<VerletParticle*> colliding_particles_1,
+                                     std::vector<VerletParticle*> colliding_particles_2, Math::Vec2<float> normal,
+                                     double depth) {
     if (object_1->is_static) {
-        for (VerletParticle* particle : object_2->get_particles()) {
-            particle->curr_position = particle->curr_position + normal * (depth / 1.50f);
+        for (VerletParticle* particle : colliding_particles_2) {
+            particle->curr_position = particle->curr_position + normal * depth;
         }
     } else if (object_2->is_static) {
-        for (VerletParticle* particle : object_1->get_particles()) {
-            particle->curr_position = particle->curr_position + normal * (depth / 1.50f);
+        for (VerletParticle* particle : colliding_particles_1) {
+            particle->curr_position = particle->curr_position + normal * depth;
         }
     } else {
-        for (VerletParticle* particle : object_1->get_particles()) {
-            particle->curr_position = particle->curr_position + normal * (depth / 2.0f);
+        float obj_ratio_1 = object_2->mass / (object_2->mass + object_1->mass);
+        float obj_ratio_2 = object_1->mass / (object_2->mass + object_1->mass);
+        for (VerletParticle* particle : colliding_particles_1) {
+            particle->curr_position = particle->curr_position + normal * (depth * obj_ratio_1);
         }
-        for (VerletParticle* particle : object_2->get_particles()) {
-            particle->curr_position = particle->curr_position - normal * (depth / 2.0f);
+        for (VerletParticle* particle : colliding_particles_2) {
+            particle->curr_position = particle->curr_position - normal * (depth * obj_ratio_2);
         }
     }
+}
+
+std::vector<VerletParticle*> PhysicsWorld::get_collision_particles(std::array<VerletParticle*, 4> particles,
+                                                                   Math::Vec2<float> normal) {
+    std::vector<VerletParticle*> colliding_particles;
+
+    float max_projection = -std::numeric_limits<float>::infinity();
+    for (VerletParticle* particle : particles) {
+        float proj = particle->curr_position.dot_product(normal);
+        max_projection = std::max(max_projection, proj);
+    }
+
+    for (VerletParticle* particle : particles) {
+        float proj = particle->curr_position.dot_product(normal);
+        if (proj >= max_projection - 0.1f) {
+            colliding_particles.push_back(particle);
+        }
+    }
+    return colliding_particles;
 }
