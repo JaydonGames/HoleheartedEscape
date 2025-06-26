@@ -8,13 +8,15 @@ struct VerletParticle {
     Math::Vec2<float> curr_position;
     Math::Vec2<float> prev_position;
     Math::Vec2<float> acceleration;
+    Math::Vec2<float> force;
+    float mass;
     bool is_static;
 
-    VerletParticle(Math::Vec2<float> curr_pos, bool is_static = false);
+    VerletParticle(Math::Vec2<float> curr_pos, float mass, bool is_static = false);
 
     void update_position(double dt);
 
-    void accelerate(Math::Vec2<float> a);
+    void apply_force(Math::Vec2<float> f);
 };
 
 struct Constraint {
@@ -41,8 +43,10 @@ public:
     bool is_static;
     float side_length;
     float diagonal_length;
+    float mass;
+    float angle;
 
-    Square(Math::Vec2<float> pos, float side_length = 16.0f, bool is_static = false);
+    Square(Math::Vec2<float> pos, float mass, float side_length = 16.0f, bool is_static = false);
 
     Square(Square&& other) noexcept;
 
@@ -60,7 +64,9 @@ public:
 
     Projection project(Math::Vec2<float> axis);
 
-    void accelerate(Math::Vec2<float> a);
+    void apply_force(Math::Vec2<float> f);
+
+    float get_angle();
 
 private:
     std::array<VerletParticle, 4> m_vertices;
