@@ -1,3 +1,4 @@
+#define _USE_MATH_DEFINES
 #include "graphics/types.hpp"
 #include "physics/square.hpp"
 #include <algorithm>

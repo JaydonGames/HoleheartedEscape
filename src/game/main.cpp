@@ -34,7 +34,7 @@ int main() {
     Render::BatchRenderer renderer;
     Render::SimpleRenderer fbo_renderer;
     Render::Camera screen_camera, camera;
-    Render::Canvas canvas{SCREEN_WIDTH, SCREEN_HEIGHT}, screen{start_size.x, start_size.y};
+    Render::Canvas canvas{SCREEN_WIDTH, SCREEN_HEIGHT}, screen{(unsigned int)start_size.x, (unsigned int)start_size.y};
     camera.set(canvas.x / 2, canvas.y / 2, 0.25f);
     context.set_clear_color(0, 0, 0);
     context.enable_vsync();
