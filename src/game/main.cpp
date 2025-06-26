@@ -31,7 +31,6 @@ int main() {
 
     OpenGL::Context::debug = true;
     OpenGL::Context context{window};
-    // Context::wireframe(true)
     Render::BatchRenderer renderer;
     Render::SimpleRenderer fbo_renderer;
     Render::Camera screen_camera, camera;
