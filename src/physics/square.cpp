@@ -6,21 +6,25 @@
 #include <iostream>
 #include <memory>
 
-VerletParticle::VerletParticle(Math::Vec2<float> pos, bool is_static)
+VerletParticle::VerletParticle(Math::Vec2<float> pos, float mass, bool is_static)
     : curr_position(pos),
       prev_position(pos),
+      mass(mass),
       is_static(is_static) {};
 
 void VerletParticle::update_position(double dt) {
     const Math::Vec2<float> displacment = curr_position - prev_position;
     prev_position = curr_position;
+
+    acceleration = force / mass;
     curr_position = curr_position + displacment + acceleration * dt * dt;
 
+    force = Math::Vec2<float>();
     acceleration = Math::Vec2<float>();
 }
 
-void VerletParticle::accelerate(Math::Vec2<float> a) {
-    acceleration = acceleration + a;
+void VerletParticle::apply_force(Math::Vec2<float> f) {
+    force = force + f;
 }
 
 Constraint::Constraint(int a, int b, float l)
@@ -44,12 +48,14 @@ bool Projection::do_flip_direction(Projection& other) {
     return max - other.min < other.max - min;
 }
 
-Square::Square(Math::Vec2<float> pos, float side_length, bool is_static)
+Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static)
     : is_static(is_static),
       side_length(side_length),
-      m_vertices{VerletParticle(pos, is_static), VerletParticle(pos + Math::Vec2<float>(side_length, 0), is_static),
-                 VerletParticle(pos + Math::Vec2<float>(side_length, side_length), is_static),
-                 VerletParticle(pos + Math::Vec2<float>(0, side_length), is_static)},
+      mass(mass),
+      m_vertices{VerletParticle(pos, mass / 4, is_static),
+                 VerletParticle(pos + Math::Vec2<float>(side_length, 0), mass / 4, is_static),
+                 VerletParticle(pos + Math::Vec2<float>(side_length, side_length), mass / 4, is_static),
+                 VerletParticle(pos + Math::Vec2<float>(0, side_length), mass / 4, is_static)},
       m_constraints{
           Constraint(0, 1, side_length),
           Constraint(1, 2, side_length),
@@ -66,6 +72,7 @@ Square::Square(Square&& other) noexcept
       m_constraints(std::move(other.m_constraints)) {
     side_length = other.side_length;
     is_static = other.is_static;
+    mass = other.mass;
 }
 
 Square& Square::operator=(Square&& other) noexcept {
@@ -74,6 +81,7 @@ Square& Square::operator=(Square&& other) noexcept {
         m_constraints = std::move(other.m_constraints);
         side_length = other.side_length;
         is_static = other.is_static;
+        mass = other.mass;
     }
     return *this;
 }
@@ -121,18 +129,27 @@ Projection Square::project(Math::Vec2<float> axis) {
     double max = min;
     for (VerletParticle& particle : m_vertices) {
         double p = particle.curr_position.dot_product(axis);
-        if (p < min) {
-            min = p;
-        } else if (p > max) {
-            max = p;
-        }
+        min = std::min(min, p);
+        max = std::max(max, p);
     }
     Projection proj = Projection(min, max);
     return proj;
 }
 
-void Square::accelerate(Math::Vec2<float> a) {
+void Square::apply_force(Math::Vec2<float> f) {
     for (VerletParticle& p : m_vertices) {
-        p.accelerate(a);
+        p.apply_force(f);
     }
+}
+
+float Square::get_angle() {
+    Math::Vec2<float> origin = m_vertices[0].curr_position;
+    Math::Vec2<float> other = m_vertices[1].curr_position;
+
+    Math::Vec2<float> diff = other - origin;
+    float angle = std::atan((-diff.y / diff.x)) * (180.0f / M_PI);
+    if (diff.x < 0) {
+        angle += 180;
+    }
+    return angle;
 }
