@@ -26,37 +26,34 @@ Square* PhysicsWorld::get_square(int i) {
 void PhysicsWorld::update(double dt) {
     const float sub_dt = dt / (float)sub_steps;
     for (int i = sub_steps; i > 0; i--) {
-        apply_gravity();
-        solve_collisions();
-        satisfy_constraints();
-        update_positions(sub_dt);
-    }
-}
-
-void PhysicsWorld::apply_gravity() {
-    for (Square* square : m_squares) {
-        if (!square->is_static) {
-            square->apply_force(m_gravity);
-        }
-    }
-}
-
-void PhysicsWorld::update_positions(double dt) {
-    for (Square* square : m_squares) {
-        if (!square->is_static) {
-            std::array<VerletParticle*, 4> particles = square->get_particles();
-            for (VerletParticle* particle : particles) {
-                particle->update_position(dt);
+        for (Square* square : m_squares) {
+            if (!square->is_static) {
+                apply_gravity(square);
+                satisfy_constraints(square);
             }
         }
+        solve_collisions();
+        for (Square* square : m_squares) {
+            update_positions(square, sub_dt);
+        }
     }
 }
 
-void PhysicsWorld::satisfy_constraints() {
-    for (Square* square : m_squares) {
-        if (square->is_static)
-            continue;
+void PhysicsWorld::apply_gravity(Square* square) {
+    square->apply_force(m_gravity);
+}
 
+void PhysicsWorld::update_positions(Square* square, double dt) {
+    if (!square->is_static) {
+        std::array<VerletParticle*, 4> particles = square->get_particles();
+        for (VerletParticle* particle : particles) {
+            particle->update_position(dt);
+        }
+    }
+}
+
+void PhysicsWorld::satisfy_constraints(Square* square) {
+    if (!square->is_static) {
         std::array<Constraint*, 6> constraints = square->get_constraints();
         std::array<VerletParticle*, 4> particles = square->get_particles();
 
@@ -71,21 +68,11 @@ void PhysicsWorld::satisfy_constraints() {
                 }
 
                 Math::Vec2<float> delta = p2->curr_position - p1->curr_position;
-                // TODO: Get rid of the sqrt operation
-                float delta_length = std::sqrt(delta.dot_product(delta));
-                delta_length = std::ceil(delta_length * 100.0) / 100.0;
-                float diff = (delta_length - c->rest_length) / delta_length;
-                Math::Vec2<float> correction = delta * diff;
-                correction = correction * .6;
-
-                if (p1->is_static) {
-                    p2->curr_position = p2->curr_position - correction;
-                } else if (p2->is_static) {
-                    p1->curr_position = p1->curr_position + correction;
-                } else {
-                    p1->curr_position = p1->curr_position + correction * 0.5f;
-                    p2->curr_position = p2->curr_position - correction * 0.5f;
-                }
+                delta = delta * ((c->rest_length * c->rest_length) /
+                                     ((delta.dot_product(delta)) + (c->rest_length * c->rest_length)) -
+                                 0.5f);
+                p2->curr_position = p2->curr_position + delta;
+                p1->curr_position = p1->curr_position - delta;
             }
         }
     }
@@ -148,12 +135,12 @@ void PhysicsWorld::solve_collisions() {
                 }
             }
 
-            if (is_collide) {
+            if (is_collide and depth > .1) {
                 if (do_flip_direction) {
                     depth = depth * -1.0f;
                 }
                 depth = std::ceil(depth * 100.0) / 100.0;
-                depth *= .9;
+                depth /= sub_steps;
                 std::vector<VerletParticle*> colliding_particles_1 =
                     get_collision_particles(square_1->get_particles(), -normal);
                 std::vector<VerletParticle*> colliding_particles_2 =
@@ -170,23 +157,23 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
     if (object_1->is_static) {
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_2) {
-            particle->curr_position = particle->curr_position + (correction / sub_steps);
+            particle->curr_position = particle->curr_position + correction;
         }
     } else if (object_2->is_static) {
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_1) {
-            particle->curr_position = particle->curr_position + (correction / sub_steps);
+            particle->curr_position = particle->curr_position + correction;
         }
     } else {
         float obj_ratio_1 = object_2->mass / (object_2->mass + object_1->mass);
         float obj_ratio_2 = object_1->mass / (object_2->mass + object_1->mass);
         Math::Vec2<float> correction_1 = normal * (depth * obj_ratio_1);
         for (VerletParticle* particle : colliding_particles_1) {
-            particle->curr_position = particle->curr_position + (correction_1 / sub_steps);
+            particle->curr_position = particle->curr_position + correction_1;
         }
         Math::Vec2<float> correction_2 = normal * (depth * obj_ratio_2);
         for (VerletParticle* particle : colliding_particles_2) {
-            particle->curr_position = particle->curr_position - (correction_2 / sub_steps);
+            particle->curr_position = particle->curr_position - correction_2;
         }
     }
 }

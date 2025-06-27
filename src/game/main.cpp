@@ -63,7 +63,7 @@ int main() {
 
     PhysicsWorld engine;
 
-    Player player{Math::Vec2<float>(300, 160), 5.0f};
+    Player player{Math::Vec2<float>(304, 160), 5.0f};
     engine.add_square(&player);
 
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};

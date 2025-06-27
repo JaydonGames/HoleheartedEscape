@@ -19,11 +19,11 @@ class PhysicsWorld {
         Math::Vec2<float> m_gravity;
         const int sub_steps = 8;
 
-        void update_positions(double dt);
+        void update_positions(Square* square, double dt);
 
-        void apply_gravity();
+        void apply_gravity(Square* square);
 
-        void satisfy_constraints();
+        void satisfy_constraints(Square* square);
 
         void solve_collisions();
 
