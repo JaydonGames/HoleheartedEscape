@@ -73,9 +73,10 @@ void PhysicsWorld::satisfy_constraints() {
                 Math::Vec2<float> delta = p2->curr_position - p1->curr_position;
                 // TODO: Get rid of the sqrt operation
                 float delta_length = std::sqrt(delta.dot_product(delta));
+                delta_length = std::ceil(delta_length * 100.0) / 100.0;
                 float diff = (delta_length - c->rest_length) / delta_length;
                 Math::Vec2<float> correction = delta * diff;
-                correction = correction * .9;
+                correction = correction * .6;
 
                 if (p1->is_static) {
                     p2->curr_position = p2->curr_position - correction;
@@ -105,7 +106,7 @@ void PhysicsWorld::solve_collisions() {
              The bool will flip the direction by making overlap negative
              depending on where the projections overlap
             */
-            double depth = 9999999;
+            double depth = std::numeric_limits<double>::infinity();
             Math::Vec2<float> normal;
             bool do_flip_direction;
 
@@ -151,6 +152,8 @@ void PhysicsWorld::solve_collisions() {
                 if (do_flip_direction) {
                     depth = depth * -1.0f;
                 }
+                depth = std::ceil(depth * 100.0) / 100.0;
+                depth *= .9;
                 std::vector<VerletParticle*> colliding_particles_1 =
                     get_collision_particles(square_1->get_particles(), -normal);
                 std::vector<VerletParticle*> colliding_particles_2 =
@@ -166,19 +169,11 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
                                      double depth) {
     if (object_1->is_static) {
         Math::Vec2<float> correction = normal * depth;
-        if (correction.x != -0 or correction.y != 0) {
-            std::cout << "correctionx: " << correction.x << '\n';
-            std::cout << "correctiony: " << correction.y << '\n';
-        }
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position + (correction / sub_steps);
         }
     } else if (object_2->is_static) {
         Math::Vec2<float> correction = normal * depth;
-        if (correction.x != -0 or correction.y != 0) {
-            std::cout << "correctionx: " << correction.x << '\n';
-            std::cout << "correctiony: " << correction.y << '\n';
-        }
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + (correction / sub_steps);
         }
@@ -188,18 +183,10 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
         Math::Vec2<float> correction_1 = normal * (depth * obj_ratio_1);
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + (correction_1 / sub_steps);
-            if (correction_1.x != -0 or correction_1.y != 0) {
-                std::cout << "correctionx: " << correction_1.x << '\n';
-                std::cout << "correctiony: " << correction_1.y << '\n';
-            }
         }
         Math::Vec2<float> correction_2 = normal * (depth * obj_ratio_2);
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position - (correction_2 / sub_steps);
-            if (correction_2.x != -0 or correction_2.y != 0) {
-                std::cout << "correctionx: " << correction_2.x << '\n';
-                std::cout << "correctiony: " << correction_2.y << '\n';
-            }
         }
     }
 }

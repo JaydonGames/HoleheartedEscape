@@ -63,7 +63,7 @@ int main() {
 
     PhysicsWorld engine;
 
-    Player player{Math::Vec2<float>(64, 160), 5.0f};
+    Player player{Math::Vec2<float>(304, 160), 5.0f};
     engine.add_square(&player);
 
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
@@ -130,7 +130,7 @@ int main() {
 
         Math::Vec2<float> player_curr_position = player.get_curr_position();
         renderer.push(player_curr_position, {0, 0, 16, 16}, player_tex, player.get_angle(), 0);
-        std::cout << "Angle: " << player.get_angle() << "\n";
+        std::cout << "angle: " << player.get_angle() << '\n';
 
         // std::array<VerletParticle *, 4> parts = player.get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
