@@ -17,6 +17,7 @@ class PhysicsWorld {
     private:
         std::vector<Square*> m_squares;
         Math::Vec2<float> m_gravity;
+        const int sub_steps = 8;
 
         void update_positions(double dt);
 

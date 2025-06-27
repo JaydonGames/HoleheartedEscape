@@ -129,8 +129,7 @@ int main() {
         }
 
         Math::Vec2<float> player_curr_position = player.get_curr_position();
-        renderer.push(player_curr_position, {0, 0, 16, 16}, player_tex,
-                      player.get_angle(), 0);
+        renderer.push(player_curr_position, {0, 0, 16, 16}, player_tex, player.get_angle(), 0);
         std::cout << "Angle: " << player.get_angle() << "\n";
 
         // std::array<VerletParticle *, 4> parts = player.get_particles();
@@ -145,8 +144,7 @@ int main() {
         // std::cout << '\n';
 
         Math::Vec2<float> object_curr_position = object.get_curr_position();
-        renderer.push(object_curr_position, {0, 0, 16, 16}, object_tex,
-                      object.get_angle(), 0);
+        renderer.push(object_curr_position, {0, 0, 16, 16}, object_tex, object.get_angle(), 0);
 
         // Light
         const uint8_t *keystate = SDL_GetKeyboardState(NULL);
