@@ -85,6 +85,8 @@ void PhysicsWorld::solve_collisions() {
         for (int i = (j + 1); i < m_squares.size(); ++i) {
             bool is_collide = true;
             Square* square_2 = m_squares[i];
+            if (square_1->is_static && square_2->is_static)
+                continue;
             std::array<Math::Vec2<float>, 2> axes_2 = square_2->get_axes();
 
             /*
