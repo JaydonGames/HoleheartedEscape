@@ -2,20 +2,24 @@
 #include <array>
 #include <vector>
 #include "graphics/types.hpp"
+#include "spatial_hashing_grid.hpp"
 #include "square.hpp"
 
 class PhysicsWorld {
     public:
-        PhysicsWorld();
+        PhysicsWorld(SpatialHashingGrid);
 
-        void add_square(Square* square);
+        void add_object(Square* square);
 
         Square* get_square(int i);
 
         void update(double dt);
 
     private:
-        std::vector<Square*> m_squares;
+        SpatialHashingGrid spatial_grid;
+        std::vector<Square*> m_all_objects;
+        std::vector<Square*> m_nonstatic_objects;
+        std::vector<Square*> m_static_objects;
         Math::Vec2<float> m_gravity;
         const int sub_steps = 8;
 
