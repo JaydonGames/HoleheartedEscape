@@ -4,37 +4,48 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 #include "graphics/types.hpp"
 #include "physics/square.hpp"
+#include "spatial_hashing_grid.hpp"
 #include "physics/physicsworld.hpp"
 #include <iostream>
 
-PhysicsWorld::PhysicsWorld() {
+// TODO: Clean up if (square->is_static)
+PhysicsWorld::PhysicsWorld(SpatialHashingGrid spatial_grid)
+    : spatial_grid(spatial_grid) {
     m_gravity = Math::Vec2<float>(0, 500.0f);
 };
 
-void PhysicsWorld::add_square(Square* square) {
-    m_squares.push_back(square);
+void PhysicsWorld::add_object(Square* square) {
+    m_all_objects.push_back(square);
+    if (square->is_static) {
+        m_static_objects.push_back(square);
+    } else {
+        m_nonstatic_objects.push_back(square);
+    }
+
+    spatial_grid.add_object(square);
 }
 
 Square* PhysicsWorld::get_square(int i) {
-    return m_squares[i];
+    return m_all_objects[i];
 }
 
-// FIX: ADD the for loops here and remove them everywhere else
 void PhysicsWorld::update(double dt) {
     const float sub_dt = dt / (float)sub_steps;
     for (int i = sub_steps; i > 0; i--) {
-        for (Square* square : m_squares) {
+        for (Square* square : m_all_objects) {
             if (!square->is_static) {
                 apply_gravity(square);
                 satisfy_constraints(square);
             }
         }
         solve_collisions();
-        for (Square* square : m_squares) {
+        for (Square* square : m_all_objects) {
             update_positions(square, sub_dt);
+            spatial_grid.update_object(square);
         }
     }
 }
@@ -78,15 +89,12 @@ void PhysicsWorld::satisfy_constraints(Square* square) {
     }
 }
 
+// NOTE: Every non-static object will be updated in the spatial hash and checked for collisions
 void PhysicsWorld::solve_collisions() {
-    for (int j = 0; j < m_squares.size(); ++j) {
-        Square* square_1 = m_squares[j];
+    for (Square* square_1 : m_nonstatic_objects) {
         std::array<Math::Vec2<float>, 2> axes_1 = square_1->get_axes();
-        for (int i = (j + 1); i < m_squares.size(); ++i) {
-            bool is_collide = true;
-            Square* square_2 = m_squares[i];
-            if (square_1->is_static && square_2->is_static)
-                continue;
+        std::vector<Square*> closest_objects = spatial_grid.get_closest_objects(square_1);
+        for (Square* square_2 : closest_objects) {
             std::array<Math::Vec2<float>, 2> axes_2 = square_2->get_axes();
 
             /*
@@ -98,6 +106,7 @@ void PhysicsWorld::solve_collisions() {
             double depth = std::numeric_limits<double>::infinity();
             Math::Vec2<float> normal;
             bool do_flip_direction;
+            bool is_collide = true;
 
             for (Math::Vec2<float> axis : axes_1) {
                 Projection p1 = square_1->project(axis);
@@ -137,11 +146,11 @@ void PhysicsWorld::solve_collisions() {
                 }
             }
 
-            if (is_collide and depth > .1) {
+            if (is_collide and depth > .05) {
                 if (do_flip_direction) {
                     depth = depth * -1.0f;
                 }
-                depth = std::ceil(depth * 100.0) / 100.0;
+                // depth = std::ceil(depth * 100.0) / 100.0;
                 depth /= sub_steps;
                 std::vector<VerletParticle*> colliding_particles_1 =
                     get_collision_particles(square_1->get_particles(), -normal);
