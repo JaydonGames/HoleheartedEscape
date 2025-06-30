@@ -1,12 +1,14 @@
 #include <SDL.h>
 #include <SDL_events.h>
 #include <SDL_keycode.h>
+#include <SDL_mouse.h>
+#include <SDL_stdinc.h>
 #include <SDL_video.h>
 #include "graphics/opengl.hpp"
 #include "graphics/render.hpp"
+#include "spatial_hashing_grid.hpp"
 #include "tiled/map.hpp"
 #include "assets.hpp"
-#include "game/object.hpp"
 #include "game/player.hpp"
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
@@ -61,13 +63,15 @@ int main() {
     world.register_tileset("main_tileset", Tilesets::main_tileset);
     Tiled::Map test_map{world, Maps::test_map};
 
-    PhysicsWorld engine;
+    SpatialHashingGrid spatial_grid{Math::Vec2<float>(0.0f, 0.0f), Math::Vec2<float>(SCREEN_WIDTH, SCREEN_HEIGHT)};
+
+    PhysicsWorld engine{spatial_grid};
 
     Player player{Math::Vec2<float>(304, 160), 5.0f};
-    engine.add_square(&player);
+    engine.add_object(&player);
 
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
-    engine.add_square(&object);
+    engine.add_object(&object);
 
     Tiled::Layer collision_layer = test_map[0];
     std::deque<Square> collision_tiles;
@@ -76,7 +80,7 @@ int main() {
             if (!collision_layer.tiles[y][x].tile)
                 continue;
             collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
-            engine.add_square(&collision_tiles.back());
+            engine.add_object(&collision_tiles.back());
         }
     }
 
@@ -86,6 +90,13 @@ int main() {
     double dt = 0;
     bool running = true;
     while (running) {
+        // int mx, my;
+        // SDL_GetMouseState(&mx, &my);
+        // std::cout << "Mouse x: " << mx << '\n';
+        // std::cout << "Mouse y: " << my << '\n';
+        // std::cout << "Canvas x: " << canvas.x << '\n';
+        // std::cout << "Canvas y: " << canvas.y << '\n';
+
         Uint64 cap_start = SDL_GetPerformanceCounter();
 
         // Delta time
@@ -130,7 +141,7 @@ int main() {
 
         Math::Vec2<float> player_curr_position = player.get_curr_position();
         renderer.push(player_curr_position, {0, 0, 16, 16}, player_tex, player.get_angle(), 0);
-        std::cout << "angle: " << player.get_angle() << '\n';
+        // std::cout << "angle: " << player.get_angle() << '\n';
 
         // std::array<VerletParticle *, 4> parts = player.get_particles();
         // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
@@ -167,6 +178,9 @@ int main() {
         screen_camera.use();
         float zoom = std::max(float(canvas.x) / screen.x, float(canvas.y) / screen.y);
         int offset_x = (screen.x * zoom - canvas.x) / 2, offset_y = (screen.y * zoom - canvas.y) / 2;
+        // std::cout << "zoom: " << zoom << '\n';
+        // std::cout << "offset x: " << offset_x << '\n';
+        // std::cout << "offset y: " << offset_y << '\n';
         screen_camera.set(screen.x / 2, screen.y / 2, zoom);
 
         fbo.blit(canvas.fbo, {0, 0, int(canvas.x), int(canvas.y)}, {0, 0, int(canvas.x), int(canvas.y)},
