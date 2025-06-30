@@ -49,8 +49,8 @@ std::vector<Square*> SpatialHashingGrid::get_closest_objects(Square* square) {
     // Math::Vec2<float> extended_bottomright = (obj_topleft + 1.0f, obj_topleft.y + 1.0f);
 
     std::vector<Square*> closest_objects;
-    for (int r = (int)obj_topleft.x - 1.0f; r < (int)obj_bottomright.x + 1.0f; ++r) {
-        for (int c = (int)obj_topleft.y - 1.0f; c < (int)obj_bottomright.y + 1.0f; ++c) {
+    for (int r = (int)obj_topleft.x - 1.0f; r <= (int)obj_bottomright.x + 1.0f; ++r) {
+        for (int c = (int)obj_topleft.y - 1.0f; c <= (int)obj_bottomright.y + 1.0f; ++c) {
             Math::Vec2<float> indexes{float(r), float(c)};
 
             std::string k = get_key(indexes);
