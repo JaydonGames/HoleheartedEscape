@@ -26,7 +26,7 @@ namespace Math {
         }
 
         Vec2 operator-() const {
-            return Vec2(x * -1.0f, y * -1.0f);
+            return Vec2(-x, -y);
         }
 
         T dot_product(const Vec2& other) const {
