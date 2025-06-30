@@ -158,6 +158,5 @@ float Square::get_angle() {
     if (diff.x < 0) {
         angle += 180;
     }
-    std::cout << angle << '\n';
     return angle;
 }
