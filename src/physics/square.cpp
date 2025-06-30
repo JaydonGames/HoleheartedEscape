@@ -92,7 +92,13 @@ Math::Vec2<float> Square::get_curr_position() {
 }
 
 Math::Vec2<float> Square::get_center_position() {
-    return m_vertices[0].curr_position + Math::Vec2<float>(side_length / 2, side_length / 2);
+    float cx = (m_vertices[0].curr_position.x + m_vertices[1].curr_position.x + m_vertices[2].curr_position.x +
+                m_vertices[3].curr_position.x) /
+               4;
+    float cy = (m_vertices[0].curr_position.y + m_vertices[1].curr_position.y + m_vertices[2].curr_position.y +
+                m_vertices[3].curr_position.y) /
+               4;
+    return Math::Vec2<float>(cx, cy);
 }
 
 std::array<VerletParticle*, 4> Square::get_particles() {
@@ -152,5 +158,6 @@ float Square::get_angle() {
     if (diff.x < 0) {
         angle += 180;
     }
+    std::cout << angle << '\n';
     return angle;
 }
