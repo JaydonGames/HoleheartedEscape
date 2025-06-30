@@ -3,7 +3,6 @@
 #include <utility>
 #include "graphics/types.hpp"
 #include "tiled/map.hpp"
-#include "game/object.hpp"
 #include "physics/square.hpp"
 
 // TODO: Cap player speed in all directions
