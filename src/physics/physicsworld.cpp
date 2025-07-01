@@ -2,6 +2,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <execution>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -169,22 +170,31 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position + correction;
+            Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
+            particle->prev_position = particle->curr_position - (velocity * 0.9f);
         }
     } else if (object_2->is_static) {
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + correction;
+            Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
+            particle->prev_position = particle->curr_position - (velocity * 0.9f);
         }
     } else {
         float obj_ratio_1 = object_2->mass / (object_2->mass + object_1->mass);
         float obj_ratio_2 = object_1->mass / (object_2->mass + object_1->mass);
         Math::Vec2<float> correction_1 = normal * (depth * obj_ratio_1);
+        Math::Vec2<float> correction_2 = normal * (depth * obj_ratio_2);
+
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + correction_1;
+            Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
+            particle->prev_position = particle->curr_position - (velocity * 0.95f);
         }
-        Math::Vec2<float> correction_2 = normal * (depth * obj_ratio_2);
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position - correction_2;
+            Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
+            particle->prev_position = particle->curr_position - (velocity * 0.95f);
         }
     }
 }
