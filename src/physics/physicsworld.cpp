@@ -166,19 +166,20 @@ void PhysicsWorld::solve_collisions() {
 void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector<VerletParticle*> colliding_particles_1,
                                      std::vector<VerletParticle*> colliding_particles_2, Math::Vec2<float> normal,
                                      double depth) {
+    float damping = 0.95f;
     if (object_1->is_static) {
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position + correction;
             Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
-            particle->prev_position = particle->curr_position - (velocity * 0.9f);
+            particle->prev_position = particle->curr_position - (velocity * damping);
         }
     } else if (object_2->is_static) {
         Math::Vec2<float> correction = normal * depth;
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + correction;
             Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
-            particle->prev_position = particle->curr_position - (velocity * 0.9f);
+            particle->prev_position = particle->curr_position - (velocity * damping);
         }
     } else {
         float obj_ratio_1 = object_2->mass / (object_2->mass + object_1->mass);
@@ -189,12 +190,12 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
         for (VerletParticle* particle : colliding_particles_1) {
             particle->curr_position = particle->curr_position + correction_1;
             Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
-            particle->prev_position = particle->curr_position - (velocity * 0.95f);
+            particle->prev_position = particle->curr_position - (velocity * damping);
         }
         for (VerletParticle* particle : colliding_particles_2) {
             particle->curr_position = particle->curr_position - correction_2;
             Math::Vec2<float> velocity = particle->curr_position - particle->prev_position;
-            particle->prev_position = particle->curr_position - (velocity * 0.95f);
+            particle->prev_position = particle->curr_position - (velocity * damping);
         }
     }
 }

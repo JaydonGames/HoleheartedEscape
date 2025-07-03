@@ -13,7 +13,7 @@ public:
     static constexpr int PLAYER_SPD = 2500;
     float mass;
 
-    Player(Math::Vec2<float> pos, float mass = 70.0f);
+    Player(Math::Vec2<float> pos, float mass = 70.0f, float side_length = 16.0f);
 
     void input();
 

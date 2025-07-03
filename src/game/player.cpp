@@ -8,8 +8,8 @@
 
 Math::Vec2<float> Player::PLAYER_JUMP_FORCE;
 
-Player::Player(Math::Vec2<float> pos, float mass)
-    : Square(pos, mass),
+Player::Player(Math::Vec2<float> pos, float mass, float side_length)
+    : Square(pos, mass, side_length),
       mass(mass) {
     PLAYER_JUMP_FORCE = Math::Vec2<float>(0, -15000.0f);
     is_jumping = false;
