@@ -6,7 +6,9 @@ layout(vertices = 1) out;
 
 in ivec2 vert_tex_wh[];
 in uint vert_flags[];
+in float vert_rotation[];
 patch out vec2 wh;
+patch out float rot;
 patch out uint flags_in;
 
 layout(std140) uniform camera_block {
@@ -22,6 +24,7 @@ void main() {
     vec2 pos = gl_in[gl_InvocationID].gl_Position.xy;
     gl_out[gl_InvocationID].gl_Position = vec4(pos, 0, 1);
     wh = vert_tex_wh[0];
+    rot = vert_rotation[0];
     flags_in = vert_flags[0];
 
     if (bool(flags_in & uint(NO_SELF_SHADOWS))) {

@@ -2,6 +2,7 @@
 layout(quads, equal_spacing) in;
 
 patch in vec2 wh;
+patch in float rot;
 patch in uint flags_in;
 flat out uint flags;
 out vec2 test_quad_vert;
@@ -37,16 +38,23 @@ void main() {
     tess_vert = vert;
     vec2 quad_pos = gl_in[0].gl_Position.xy;
     vec2 quad_center = quad_pos + wh / 2;
-    bvec2 quad_vert = bvec2(light.pos.x > quad_center.x, light.pos.y > quad_center.y);
+
+
+    float angle = radians(rot);
+    mat2 rotation = mat2(vec2(cos(angle), -sin(angle)), vec2(sin(angle), cos(angle)));
+    mat2 inverse_rotation = mat2(vec2(cos(-angle), -sin(-angle)), vec2(sin(-angle), cos(-angle)));
+
+    vec2 rot_light_pos = inverse_rotation * (light.pos - quad_pos) + quad_pos;
+    bvec2 quad_vert = bvec2(rot_light_pos.x > quad_center.x, rot_light_pos.y > quad_center.y);
     test_quad_vert = vec2(quad_vert);
 
-    if (vert.x == 0 && abs(quad_center.y - light.pos.y) >= wh.y / 2)
+    if (vert.x == 0 && abs(quad_center.y - rot_light_pos.y) >= wh.y / 2)
         quad_vert.x = !quad_vert.x;
-    else if (vert.x == 1 && abs(quad_center.x - light.pos.x) >= wh.x / 2)
+    else if (vert.x == 1 && abs(quad_center.x - rot_light_pos.x) >= wh.x / 2)
         quad_vert.y = !quad_vert.y;
 
     test_vert = vec2(quad_vert);
-    vec2 pos = world_to_screen(quad_pos + vec2(quad_vert) * wh);
+    vec2 pos = world_to_screen(rotation * vec2(quad_vert) * wh + vec2(quad_pos));
     vec2 light_pos = world_to_screen(light.pos);
 
     gl_Position = vec4(vert.y != 1 ? pos : (normalize(pos - light_pos) * 12 + light_pos), 0, 1);
