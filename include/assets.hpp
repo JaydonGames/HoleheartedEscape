@@ -33,7 +33,7 @@ namespace Textures {
 namespace Maps {
     typedef const char asset_t[];
 
-    extern asset_t test_map;
+    extern asset_t tutorial_map;
 }
 
 namespace Tilesets {

@@ -61,7 +61,7 @@ int main() {
     Tiled::World world;
     world.register_texture("main_tileset", main_tileset);
     world.register_tileset("main_tileset", Tilesets::main_tileset);
-    Tiled::Map test_map{world, Maps::test_map};
+    Tiled::Map tutorial_map{world, Maps::tutorial_map};
 
     SpatialHashingGrid spatial_grid{Math::Vec2<float>(0.0f, 0.0f), Math::Vec2<float>(SCREEN_WIDTH, SCREEN_HEIGHT)};
 
@@ -73,7 +73,7 @@ int main() {
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
     engine.add_object(&object);
 
-    Tiled::Layer collision_layer = test_map[0];
+    Tiled::Layer collision_layer = tutorial_map[0];
     std::deque<Square> collision_tiles;
     for (int y = 0; y < collision_layer.tiles.size(); ++y) {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
@@ -127,7 +127,7 @@ int main() {
         engine.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0, Render::NoSelfShadows);
-        for (auto &layer : test_map.layers) {
+        for (auto &layer : tutorial_map.layers) {
             for (int y = 0; y < layer.tiles.size(); ++y) {
                 for (int x = 0; x < layer.tiles[y].size(); ++x) {
                     Tiled::Tile *tile = layer.tiles[y][x].tile;

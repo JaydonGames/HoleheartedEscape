@@ -2,7 +2,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <execution>
 #include <limits>
 #include <stdexcept>
 #include <utility>
