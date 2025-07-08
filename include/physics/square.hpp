@@ -1,46 +1,11 @@
 #pragma once
-#include <array>
-#include <memory>
-#include <vector>
 #include "graphics/types.hpp"
+#include "physics/structures.hpp"
+#include "shape.hpp"
+#include <array>
 
-struct VerletParticle {
-    Math::Vec2<float> curr_position;
-    Math::Vec2<float> prev_position;
-    Math::Vec2<float> acceleration;
-    Math::Vec2<float> force;
-    float mass;
-    bool is_static;
-
-    VerletParticle(Math::Vec2<float> curr_pos, float mass, bool is_static = false);
-
-    void update_position(double dt);
-
-    void apply_force(Math::Vec2<float> f);
-};
-
-struct Constraint {
-    Constraint(int a, int b, float l);
-
-    int particle_a, particle_b;
-    float rest_length;
-};
-
-struct Projection {
-    Projection(float min, float max);
-    float min, max;
-
-    bool is_overlap(Projection& other);
-
-    double get_overlap(Projection& other);
-
-    bool do_flip_direction(Projection& other);
-};
-
-class Square {
+class Square : public Shape {
 public:
-    // TODO: ADD mass
-    bool is_static;
     float side_length;
     float diagonal_length;
     float mass;
@@ -52,21 +17,23 @@ public:
 
     Square& operator=(Square&& other) noexcept;
 
-    Math::Vec2<float> get_curr_position();
+    Math::Vec2<float> get_curr_position() override;
 
-    Math::Vec2<float> get_center_position();
+    Math::Vec2<float> get_center_position() override;
 
-    std::array<VerletParticle*, 4> get_particles();
+    float get_max_side_length() override;
 
-    std::array<Constraint*, 6> get_constraints();
+    std::array<VerletParticle*, 4> get_particles() override;
 
-    std::array<Math::Vec2<float>, 2> get_axes();
+    std::array<Constraint*, 6> get_constraints() override;
 
-    Projection project(Math::Vec2<float> axis);
+    std::array<Math::Vec2<float>, 2> get_axes() override;
 
-    void apply_force(Math::Vec2<float> f);
+    Projection project(Math::Vec2<float> axis) override;
 
-    float get_angle();
+    void apply_force(Math::Vec2<float> f) override;
+
+    float get_angle() override;
 
 private:
     std::array<VerletParticle, 4> m_vertices;
