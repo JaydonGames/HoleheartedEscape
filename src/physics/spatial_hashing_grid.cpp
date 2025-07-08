@@ -1,4 +1,3 @@
-
 #include "spatial_hashing_grid.hpp"
 #include <algorithm>
 #include <cmath>
@@ -9,7 +8,7 @@
 #include <utility>
 #include <vector>
 #include "graphics/types.hpp"
-#include "square.hpp"
+#include "physics/shape.hpp"
 #include <iostream>
 
 SpatialHashingGrid::SpatialHashingGrid(Math::Vec2<float> topleft_canvas, Math::Vec2<float> bottomright_canvas,
@@ -19,13 +18,13 @@ SpatialHashingGrid::SpatialHashingGrid(Math::Vec2<float> topleft_canvas, Math::V
       m_tile_width(tile_width),
       m_tile_height(tile_height) {}
 
-void SpatialHashingGrid::add_object(Square* square) {
-    float max_length = square->side_length;
-    Math::Vec2<float> pos = square->get_center_position();
+void SpatialHashingGrid::add_object(Shape* object) {
+    float max_length = object->get_max_side_length();
+    Math::Vec2<float> pos = object->get_center_position();
 
     Math::Vec2<float> topleft = get_cell_pos(Math::Vec2<float>(pos.x - max_length / 2, pos.y - max_length / 2));
     Math::Vec2<float> bottomright = get_cell_pos(Math::Vec2<float>(pos.x + max_length / 2, pos.y + max_length / 2));
-    object_indexes.insert({square, std::make_pair(topleft, bottomright)});
+    object_indexes.insert({object, std::make_pair(topleft, bottomright)});
 
     for (int r = (int)topleft.x; r < (int)bottomright.x; ++r) {
         for (int c = (int)topleft.y; c < (int)bottomright.y; ++c) {
@@ -33,30 +32,27 @@ void SpatialHashingGrid::add_object(Square* square) {
 
             std::string k = get_key(indexes);
             if (grid.count(k)) {
-                grid[k].insert(square);
+                grid[k].insert(object);
             } else {
-                std::unordered_set<Square*> objects = {square};
+                std::unordered_set<Shape*> objects = {object};
                 grid.insert({k, objects});
             }
         }
     }
 }
 
-std::vector<Square*> SpatialHashingGrid::get_closest_objects(Square* square) {
-    auto [obj_topleft, obj_bottomright] = object_indexes[square];
+std::vector<Shape*> SpatialHashingGrid::get_closest_objects(Shape* object) {
+    auto [obj_topleft, obj_bottomright] = object_indexes[object];
 
-    // Math::Vec2<float> extended_topleft = (obj_topleft - 1.0f, obj_topleft.y - 1.0f);
-    // Math::Vec2<float> extended_bottomright = (obj_topleft + 1.0f, obj_topleft.y + 1.0f);
-
-    std::vector<Square*> closest_objects;
+    std::vector<Shape*> closest_objects;
     for (int r = (int)obj_topleft.x - 1.0f; r <= (int)obj_bottomright.x + 1.0f; ++r) {
         for (int c = (int)obj_topleft.y - 1.0f; c <= (int)obj_bottomright.y + 1.0f; ++c) {
             Math::Vec2<float> indexes{float(r), float(c)};
 
             std::string k = get_key(indexes);
-            for (Square* object : grid[k]) {
-                if (object != square) {
-                    closest_objects.push_back(object);
+            for (Shape* other_object : grid[k]) {
+                if (object != other_object) {
+                    closest_objects.push_back(other_object);
                 }
             }
         }
@@ -78,22 +74,22 @@ std::string SpatialHashingGrid::get_key(Math::Vec2<float> indexes) {
     return std::to_string((int)indexes.x) + ',' + std::to_string((int)indexes.y);
 }
 
-void SpatialHashingGrid::remove_object(Square* square) {
-    Math::Vec2<float> topleft = object_indexes[square].first;
-    Math::Vec2<float> bottomright = object_indexes[square].second;
+void SpatialHashingGrid::remove_object(Shape* object) {
+    Math::Vec2<float> topleft = object_indexes[object].first;
+    Math::Vec2<float> bottomright = object_indexes[object].second;
 
     for (int r = (int)topleft.x; r < (int)bottomright.x; ++r) {
         for (int c = (int)topleft.y; c < (int)bottomright.y; ++c) {
             Math::Vec2<float> indexes{float(r), float(c)};
             std::string k = get_key(indexes);
-            grid[k].erase(square);
+            grid[k].erase(object);
         }
     }
 
-    object_indexes.erase(square);
+    object_indexes.erase(object);
 }
 
-void SpatialHashingGrid::update_object(Square* square) {
-    remove_object(square);
-    add_object(square);
+void SpatialHashingGrid::update_object(Shape* object) {
+    remove_object(object);
+    add_object(object);
 }
