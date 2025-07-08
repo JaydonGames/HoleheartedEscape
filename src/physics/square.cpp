@@ -1,56 +1,8 @@
-#define _USE_MATH_DEFINES
-#include "graphics/types.hpp"
 #include "physics/square.hpp"
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <iostream>
-#include <memory>
-
-VerletParticle::VerletParticle(Math::Vec2<float> pos, float mass, bool is_static)
-    : curr_position(pos),
-      prev_position(pos),
-      mass(mass),
-      is_static(is_static) {};
-
-void VerletParticle::update_position(double dt) {
-    const Math::Vec2<float> displacment = curr_position - prev_position;
-    prev_position = curr_position;
-
-    acceleration = force / mass;
-    curr_position = curr_position + displacment + acceleration * dt * dt;
-
-    force = Math::Vec2<float>();
-    acceleration = Math::Vec2<float>();
-}
-
-void VerletParticle::apply_force(Math::Vec2<float> f) {
-    force = force + f;
-}
-
-Constraint::Constraint(int a, int b, float l)
-    : particle_a(a),
-      particle_b(b),
-      rest_length(l) {};
-
-Projection::Projection(float min, float max)
-    : min(min),
-      max(max) {};
-
-bool Projection::is_overlap(Projection& other) {
-    return max >= other.min && other.max >= min;
-}
-
-double Projection::get_overlap(Projection& other) {
-    return std::min(max - other.min, other.max - min);
-}
-
-bool Projection::do_flip_direction(Projection& other) {
-    return max - other.min < other.max - min;
-}
+#include "shape.hpp"
 
 Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static)
-    : is_static(is_static),
+    : Shape(is_static),
       side_length(side_length),
       mass(mass),
       m_vertices{VerletParticle(pos, mass / 4, is_static),
@@ -68,8 +20,10 @@ Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_sta
           Constraint(1, 3, sqrt(2 * (side_length * side_length))),
       } {}
 
+// Is this how this is done?
 Square::Square(Square&& other) noexcept
-    : m_vertices(std::move(other.m_vertices)),
+    : Shape(other.is_static),
+      m_vertices(std::move(other.m_vertices)),
       m_constraints(std::move(other.m_constraints)) {
     side_length = other.side_length;
     is_static = other.is_static;
@@ -99,6 +53,10 @@ Math::Vec2<float> Square::get_center_position() {
                 m_vertices[3].curr_position.y) /
                4;
     return Math::Vec2<float>(cx, cy);
+}
+
+float Square::get_max_side_length() {
+    return side_length;
 }
 
 std::array<VerletParticle*, 4> Square::get_particles() {
