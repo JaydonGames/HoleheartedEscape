@@ -2,7 +2,7 @@
 #include "shape.hpp"
 
 Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static)
-    : Shape(is_static),
+    : Shape(is_static, mass),
       side_length(side_length),
       mass(mass),
       m_vertices{VerletParticle(pos, mass / 4, is_static),
@@ -22,7 +22,7 @@ Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_sta
 
 // Is this how this is done?
 Square::Square(Square&& other) noexcept
-    : Shape(other.is_static),
+    : Shape(other.is_static, other.mass),
       m_vertices(std::move(other.m_vertices)),
       m_constraints(std::move(other.m_constraints)) {
     side_length = other.side_length;

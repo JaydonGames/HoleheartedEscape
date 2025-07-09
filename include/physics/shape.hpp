@@ -8,7 +8,7 @@ struct Shape {
     float mass;
     float angle;
 
-    Shape(bool is_static);
+    Shape(bool is_static, float mass);
 
     virtual Math::Vec2<float> get_curr_position() = 0;
 
