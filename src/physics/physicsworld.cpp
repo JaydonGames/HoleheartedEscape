@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <set>
 #include <cmath>
 #include <cstddef>
 #include <limits>
@@ -8,6 +9,7 @@
 #include <vector>
 #include "graphics/types.hpp"
 #include "spatial_hashing_grid.hpp"
+#include "structures.hpp"
 #include "physics/physicsworld.hpp"
 #include <iostream>
 
@@ -55,23 +57,25 @@ void PhysicsWorld::apply_gravity(Shape* object) {
 
 void PhysicsWorld::update_positions(Shape* object, double dt) {
     if (!object->is_static) {
-        std::array<VerletParticle*, 4> particles = object->get_particles();
-        for (VerletParticle* particle : particles) {
-            particle->update_position(dt);
+        ArrayRef<VerletParticle> particles = object->get_particles();
+
+        // NOTE: Why do we need VerletParticle& vs no &
+        for (VerletParticle& particle : particles) {
+            particle.update_position(dt);
         }
     }
 }
 
 void PhysicsWorld::satisfy_constraints(Shape* object) {
     if (!object->is_static) {
-        std::array<Constraint*, 6> constraints = object->get_constraints();
-        std::array<VerletParticle*, 4> particles = object->get_particles();
+        ArrayRef<Constraint> constraints = object->get_constraints();
+        ArrayRef<VerletParticle> particles = object->get_particles();
 
         for (int j = 0; j < 5; ++j) {
             for (int i = 0; i < 6; ++i) {
-                Constraint* c = constraints[i];
-                VerletParticle* p1 = particles[c->particle_a];
-                VerletParticle* p2 = particles[c->particle_b];
+                Constraint* c = constraints.arr + i;
+                VerletParticle* p1 = &particles.arr[c->particle_a];
+                VerletParticle* p2 = &particles.arr[c->particle_b];
 
                 if (p1->is_static && p2->is_static) {
                     continue;
@@ -91,10 +95,10 @@ void PhysicsWorld::satisfy_constraints(Shape* object) {
 // NOTE: Every non-static object will be updated in the spatial hash and checked for collisions
 void PhysicsWorld::solve_collisions() {
     for (Shape* object_1 : m_nonstatic_objects) {
-        std::array<Math::Vec2<float>, 2> axes_1 = object_1->get_axes();
+        std::vector<Math::Vec2<float>> axes_1 = object_1->get_axes();
         std::vector<Shape*> closest_objects = spatial_grid.get_closest_objects(object_1);
         for (Shape* object_2 : closest_objects) {
-            std::array<Math::Vec2<float>, 2> axes_2 = object_2->get_axes();
+            std::vector<Math::Vec2<float>> axes_2 = object_2->get_axes();
 
             /*
              NOTE: The normal or depth does not indicate which direction
@@ -198,20 +202,20 @@ void PhysicsWorld::resolve_collision(auto& object_1, auto& object_2, std::vector
     }
 }
 
-std::vector<VerletParticle*> PhysicsWorld::get_collision_particles(std::array<VerletParticle*, 4> particles,
+std::vector<VerletParticle*> PhysicsWorld::get_collision_particles(ArrayRef<VerletParticle> particles,
                                                                    Math::Vec2<float> normal) {
     std::vector<VerletParticle*> colliding_particles;
 
     float max_projection = -std::numeric_limits<float>::infinity();
-    for (VerletParticle* particle : particles) {
-        float proj = particle->curr_position.dot_product(normal);
+    for (VerletParticle& particle : particles) {
+        float proj = particle.curr_position.dot_product(normal);
         max_projection = std::max(max_projection, proj);
     }
 
-    for (VerletParticle* particle : particles) {
-        float proj = particle->curr_position.dot_product(normal);
+    for (VerletParticle& particle : particles) {
+        float proj = particle.curr_position.dot_product(normal);
         if (proj >= max_projection - 0.1f) {
-            colliding_particles.push_back(particle);
+            colliding_particles.push_back(&particle);
         }
     }
     return colliding_particles;
