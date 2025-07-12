@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include "graphics/types.hpp"
 
 struct VerletParticle {
@@ -32,4 +33,18 @@ struct Projection {
     double get_overlap(Projection& other);
 
     bool do_flip_direction(Projection& other);
+};
+
+template<typename T>
+struct ArrayRef {
+    T* arr;
+    size_t size;
+
+    T* begin() {
+        return arr;
+    }
+
+    T* end() {
+        return arr + size;
+    }
 };
