@@ -11,7 +11,6 @@ class Player : public Square {
 public:
     static Math::Vec2<float> PLAYER_JUMP_FORCE;
     static constexpr int PLAYER_SPD = 5000;
-    float mass;
 
     Player(Math::Vec2<float> pos, float mass = 70.0f, float side_length = 14.0f);
 
