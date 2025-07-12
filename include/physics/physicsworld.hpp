@@ -4,7 +4,7 @@
 #include "graphics/types.hpp"
 #include "spatial_hashing_grid.hpp"
 #include "shape.hpp"
-#include "square.hpp"
+#include "structures.hpp"
 
 class PhysicsWorld {
 public:
@@ -35,5 +35,5 @@ private:
     void resolve_collision(auto& object_1, auto& object_2, std::vector<VerletParticle*> colliding_particles_1,
                            std::vector<VerletParticle*> colliding_particles_2, Math::Vec2<float> normal, double depth);
 
-    std::vector<VerletParticle*> get_collision_particles(std::array<VerletParticle*, 4>, Math::Vec2<float> normal);
+    std::vector<VerletParticle*> get_collision_particles(ArrayRef<VerletParticle> particles, Math::Vec2<float> normal);
 };
