@@ -7,6 +7,7 @@
 #include "graphics/opengl.hpp"
 #include "graphics/render.hpp"
 #include "spatial_hashing_grid.hpp"
+#include "structures.hpp"
 #include "tiled/map.hpp"
 #include "assets.hpp"
 #include "game/player.hpp"
@@ -69,7 +70,6 @@ int main() {
 
     Player player{Math::Vec2<float>(120, 200), 5.0f, 14.0f};
     engine.add_object(&player);
-
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
     engine.add_object(&object);
 
@@ -79,7 +79,7 @@ int main() {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
             if (!collision_layer.tiles[y][x].tile)
                 continue;
-            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
+            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true, true);
             engine.add_object(&collision_tiles.back());
         }
     }
@@ -90,13 +90,6 @@ int main() {
     double dt = 0;
     bool running = true;
     while (running) {
-        // int mx, my;
-        // SDL_GetMouseState(&mx, &my);
-        // std::cout << "Mouse x: " << mx << '\n';
-        // std::cout << "Mouse y: " << my << '\n';
-        // std::cout << "Canvas x: " << canvas.x << '\n';
-        // std::cout << "Canvas y: " << canvas.y << '\n';
-
         Uint64 cap_start = SDL_GetPerformanceCounter();
 
         // Delta time
@@ -120,8 +113,6 @@ int main() {
             }
         }
         player.input();
-        // std::cout << "X: " << player.get_particles()[0]->acceleration.x << '\n';
-        // std::cout << "y: " << player.get_particles()[0]->acceleration.y << "\n\n";
 
         // Updating
         engine.update(dt);
@@ -143,15 +134,15 @@ int main() {
         renderer.push(player_curr_position, {0, 0, 14, 14}, player_tex, player.get_angle(), 0);
         // std::cout << "angle: " << player.get_angle() << '\n';
 
-        // std::array<VerletParticle *, 4> parts = player.get_particles();
-        // std::cout << "0x: " << parts[0]->curr_position.x << '\n';
-        // std::cout << "0y: " << parts[0]->curr_position.y << '\n';
-        // std::cout << "1x: " << parts[1]->curr_position.x << '\n';
-        // std::cout << "1y: " << parts[1]->curr_position.y << '\n';
-        // std::cout << "2x: " << parts[2]->curr_position.x << '\n';
-        // std::cout << "2y: " << parts[2]->curr_position.y << '\n';
-        // std::cout << "3x: " << parts[3]->curr_position.x << '\n';
-        // std::cout << "3y: " << parts[3]->curr_position.y << '\n';
+        // ArrayRef<VerletParticle> parts = player.get_particles();
+        // std::cout << "0x: " << (parts.arr + 0)->curr_position.x << '\n';
+        // std::cout << "0y: " << (parts.arr + 0)->curr_position.y << '\n';
+        // std::cout << "1x: " << (parts.arr + 1)->curr_position.x << '\n';
+        // std::cout << "1y: " << (parts.arr + 1)->curr_position.y << '\n';
+        // std::cout << "2x: " << (parts.arr + 2)->curr_position.x << '\n';
+        // std::cout << "2y: " << (parts.arr + 2)->curr_position.y << '\n';
+        // std::cout << "3x: " << (parts.arr + 3)->curr_position.x << '\n';
+        // std::cout << "3y: " << (parts.arr + 3)->curr_position.y << '\n';
         // std::cout << '\n';
 
         Math::Vec2<float> object_curr_position = object.get_curr_position();
