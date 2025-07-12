@@ -3,15 +3,17 @@
 #include "physics/structures.hpp"
 #include "shape.hpp"
 #include <array>
+#include <vector>
 
 class Square : public Shape {
 public:
     float side_length;
     float diagonal_length;
-    float mass;
     float angle;
+    bool is_ground;
 
-    Square(Math::Vec2<float> pos, float mass, float side_length = 16.0f, bool is_static = false);
+    Square(Math::Vec2<float> pos, float mass, float side_length = 16.0f, bool is_static = false,
+           bool is_ground = false);
 
     Square(Square&& other) noexcept;
 
@@ -23,11 +25,11 @@ public:
 
     float get_max_side_length() override;
 
-    std::array<VerletParticle*, 4> get_particles() override;
+    ArrayRef<VerletParticle> get_particles() override;
 
-    std::array<Constraint*, 6> get_constraints() override;
+    ArrayRef<Constraint> get_constraints() override;
 
-    std::array<Math::Vec2<float>, 2> get_axes() override;
+    std::vector<Math::Vec2<float>> get_axes() override;
 
     Projection project(Math::Vec2<float> axis) override;
 
