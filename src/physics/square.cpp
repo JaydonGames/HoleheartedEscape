@@ -1,10 +1,11 @@
 #include "physics/square.hpp"
 #include "shape.hpp"
+#include "structures.hpp"
 
-Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static)
+Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static, bool is_ground)
     : Shape(is_static, mass),
+      is_ground(is_ground),
       side_length(side_length),
-      mass(mass),
       m_vertices{VerletParticle(pos, mass / 4, is_static),
                  VerletParticle(pos + Math::Vec2<float>(side_length, 0), mass / 4, is_static),
                  VerletParticle(pos + Math::Vec2<float>(side_length, side_length), mass / 4, is_static),
@@ -59,24 +60,16 @@ float Square::get_max_side_length() {
     return side_length;
 }
 
-std::array<VerletParticle*, 4> Square::get_particles() {
-    std::array<VerletParticle*, 4> ptrs;
-    for (int i = 0; i < 4; ++i) {
-        ptrs[i] = &m_vertices[i];
-    }
-    return ptrs;
+ArrayRef<VerletParticle> Square::get_particles() {
+    return {m_vertices.data(), 4};
 }
 
-std::array<Constraint*, 6> Square::get_constraints() {
-    std::array<Constraint*, 6> ptrs;
-    for (int i = 0; i < 6; ++i) {
-        ptrs[i] = &m_constraints[i];
-    }
-    return ptrs;
+ArrayRef<Constraint> Square::get_constraints() {
+    return {m_constraints.data(), 6};
 }
 
-std::array<Math::Vec2<float>, 2> Square::get_axes() {
-    std::array<Math::Vec2<float>, 2> axes;
+std::vector<Math::Vec2<float>> Square::get_axes() {
+    std::vector<Math::Vec2<float>> axes;
     for (int i = 0; i < 2; ++i) {
         VerletParticle p1 = m_vertices[i];
         VerletParticle p2 = m_vertices[i + 1];
@@ -84,7 +77,7 @@ std::array<Math::Vec2<float>, 2> Square::get_axes() {
         Math::Vec2<float> edge = p1.curr_position - p2.curr_position;
         Math::Vec2<float> normal = edge.get_perpendicular().normalize();
 
-        axes[i] = normal;
+        axes.push_back(normal);
     }
     return axes;
 }
