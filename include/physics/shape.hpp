@@ -1,7 +1,7 @@
 #pragma once
 #include "graphics/types.hpp"
 #include "physics/structures.hpp"
-#include <array>
+#include <vector>
 
 struct Shape {
     bool is_static;
@@ -16,11 +16,11 @@ struct Shape {
 
     virtual float get_max_side_length() = 0;
 
-    virtual std::array<VerletParticle*, 4> get_particles() = 0;
+    virtual ArrayRef<VerletParticle> get_particles() = 0;
 
-    virtual std::array<Constraint*, 6> get_constraints() = 0;
+    virtual ArrayRef<Constraint> get_constraints() = 0;
 
-    virtual std::array<Math::Vec2<float>, 2> get_axes() = 0;
+    virtual std::vector<Math::Vec2<float>> get_axes() = 0;
 
     virtual Projection project(Math::Vec2<float> axis) = 0;
 
