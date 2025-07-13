@@ -1,9 +1,8 @@
 #pragma once
 #include <SDL_events.h>
-#include <utility>
 #include "graphics/types.hpp"
-#include "tiled/map.hpp"
 #include "physics/square.hpp"
+#include "structures.hpp"
 
 // TODO: Cap player speed in all directions
 // add friction and drag to all objects
@@ -16,5 +15,8 @@ public:
 
     void input();
 
-    bool is_jumping;
+    void check_to_enable_player_jump(ArrayRef<VerletParticle> collided_object_particles);
+
+private:
+    bool m_is_jumping;
 };
