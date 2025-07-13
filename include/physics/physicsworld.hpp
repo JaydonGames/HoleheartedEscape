@@ -1,5 +1,4 @@
 #pragma once
-#include <array>
 #include <vector>
 #include "graphics/types.hpp"
 #include "spatial_hashing_grid.hpp"
