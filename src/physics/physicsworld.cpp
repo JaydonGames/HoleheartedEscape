@@ -1,17 +1,10 @@
 #include <algorithm>
-#include <array>
-#include <set>
-#include <cmath>
-#include <cstddef>
 #include <limits>
-#include <stdexcept>
-#include <utility>
 #include <vector>
 #include "graphics/types.hpp"
 #include "spatial_hashing_grid.hpp"
 #include "structures.hpp"
 #include "physics/physicsworld.hpp"
-#include <iostream>
 
 // TODO: Clean up if (square->is_static)
 PhysicsWorld::PhysicsWorld(SpatialHashingGrid spatial_grid)
@@ -153,7 +146,11 @@ void PhysicsWorld::solve_collisions() {
                 if (do_flip_direction) {
                     depth = depth * -1.0f;
                 }
-                // depth = std::ceil(depth * 100.0) / 100.0;
+                if (object_1->is_player) {
+                    object_1->check_to_enable_player_jump(object_2->get_particles());
+                } else if (object_2->is_player) {
+                    object_2->check_to_enable_player_jump(object_1->get_particles());
+                }
                 depth /= sub_steps;
                 std::vector<VerletParticle*> colliding_particles_1 =
                     get_collision_particles(object_1->get_particles(), -normal);
