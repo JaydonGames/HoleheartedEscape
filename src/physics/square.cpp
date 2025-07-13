@@ -2,9 +2,8 @@
 #include "shape.hpp"
 #include "structures.hpp"
 
-Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static, bool is_ground)
-    : Shape(is_static, mass),
-      is_ground(is_ground),
+Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_static, bool is_player)
+    : Shape(is_static, mass, is_player),
       side_length(side_length),
       m_vertices{VerletParticle(pos, mass / 4, is_static),
                  VerletParticle(pos + Math::Vec2<float>(side_length, 0), mass / 4, is_static),
@@ -23,7 +22,7 @@ Square::Square(Math::Vec2<float> pos, float mass, float side_length, bool is_sta
 
 // Is this how this is done?
 Square::Square(Square&& other) noexcept
-    : Shape(other.is_static, other.mass),
+    : Shape(other.is_static, other.mass, other.is_player),
       m_vertices(std::move(other.m_vertices)),
       m_constraints(std::move(other.m_constraints)) {
     side_length = other.side_length;
@@ -111,3 +110,5 @@ float Square::get_angle() {
     }
     return angle;
 }
+
+void Square::check_to_enable_player_jump(ArrayRef<VerletParticle>) {}
