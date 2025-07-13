@@ -7,15 +7,12 @@
 #include "graphics/opengl.hpp"
 #include "graphics/render.hpp"
 #include "spatial_hashing_grid.hpp"
-#include "structures.hpp"
 #include "tiled/map.hpp"
 #include "assets.hpp"
 #include "game/player.hpp"
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
-#include <array>
 #include <deque>
-#include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
 constexpr int SCREEN_HEIGHT = 1080;
@@ -79,7 +76,7 @@ int main() {
         for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
             if (!collision_layer.tiles[y][x].tile)
                 continue;
-            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true, true);
+            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
             engine.add_object(&collision_tiles.back());
         }
     }
