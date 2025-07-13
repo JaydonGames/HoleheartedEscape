@@ -13,7 +13,7 @@ public:
     bool is_ground;
 
     Square(Math::Vec2<float> pos, float mass, float side_length = 16.0f, bool is_static = false,
-           bool is_ground = false);
+           bool is_player = false);
 
     Square(Square&& other) noexcept;
 
@@ -36,6 +36,11 @@ public:
     void apply_force(Math::Vec2<float> f) override;
 
     float get_angle() override;
+
+    // WARNING: This is terrible but I don't feel like rewriting everything lol
+    // It's only for the player class
+    // I also don't know how else to do this. Aydon help
+    void check_to_enable_player_jump(ArrayRef<VerletParticle>) override;
 
 private:
     std::array<VerletParticle, 4> m_vertices;
