@@ -70,7 +70,7 @@ int main() {
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
     engine.add_object(&object);
 
-    Tiled::Grid<Tiled::MapTile> &collision_layer = tutorial_map.tile_layers["Main_collision"];
+    Tiled::Grid<Tiled::MapTile> &collision_layer = tutorial_map.tile_layers["MainCollision"];
     std::deque<Square> collision_tiles;
     for (int y = 0; y < collision_layer.size(); ++y) {
         for (int x = 0; x < collision_layer[y].size(); ++x) {
