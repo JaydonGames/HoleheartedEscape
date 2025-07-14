@@ -12,7 +12,9 @@
 #include "game/player.hpp"
 #include "physics/physicsworld.hpp"
 #include "physics/square.hpp"
+#include "types.hpp"
 #include <deque>
+#include <iostream>
 
 constexpr int SCREEN_WIDTH = 1920;
 constexpr int SCREEN_HEIGHT = 1080;
@@ -65,9 +67,18 @@ int main() {
 
     PhysicsWorld engine{spatial_grid};
 
-    Player player{Math::Vec2<float>(120, 200), 5.0f, 14.0f};
+    std::unordered_map<std::string_view, Math::Vec2<float>> &object_layers = tutorial_map.object_layers["Objects"];
+
+    Math::Vec2<float> player_pos = object_layers["Player"];
+    float player_mass = 5.0f;
+    float player_side_length = 14.0f;
+    Player player{player_pos, player_mass, player_side_length};
     engine.add_object(&player);
-    Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
+
+    Math::Vec2<float> object_pos = object_layers["Box"];
+    float object_mass = 3.0f;
+    float object_side_length = 16.0f;
+    Square object{object_pos, object_mass, object_side_length};
     engine.add_object(&object);
 
     Tiled::Grid<Tiled::MapTile> &collision_layer = tutorial_map.tile_layers["MainCollision"];
@@ -76,7 +87,11 @@ int main() {
         for (int x = 0; x < collision_layer[y].size(); ++x) {
             if (!collision_layer[y][x].tile)
                 continue;
-            collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
+            Math::Vec2<float> tile_pos = {x * 16.0f, y * 16.0f};
+            float tile_mass = -1.0f;
+            float tile_side_length = 16.0f;
+            bool is_static = true;
+            collision_tiles.emplace_back(tile_pos, tile_mass, tile_side_length, is_static);
             engine.add_object(&collision_tiles.back());
         }
     }
