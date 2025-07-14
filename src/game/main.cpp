@@ -70,11 +70,11 @@ int main() {
     Square object{Math::Vec2<float>(80, 224), 3.0f, 16.0f};
     engine.add_object(&object);
 
-    Tiled::Layer collision_layer = tutorial_map[0];
+    Tiled::Grid<Tiled::MapTile> &collision_layer = tutorial_map.tile_layers["Main_collision"];
     std::deque<Square> collision_tiles;
-    for (int y = 0; y < collision_layer.tiles.size(); ++y) {
-        for (int x = 0; x < collision_layer.tiles[y].size(); ++x) {
-            if (!collision_layer.tiles[y][x].tile)
+    for (int y = 0; y < collision_layer.size(); ++y) {
+        for (int x = 0; x < collision_layer[y].size(); ++x) {
+            if (!collision_layer[y][x].tile)
                 continue;
             collision_tiles.emplace_back(Math::Vec2<float>(x * 16, y * 16), -1.0f, 16.0f, true);
             engine.add_object(&collision_tiles.back());
@@ -115,14 +115,14 @@ int main() {
         engine.update(dt);
 
         renderer.push({0, 0}, {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT}, bg, 0, Render::NoSelfShadows);
-        for (auto &layer : tutorial_map.layers) {
-            for (int y = 0; y < layer.tiles.size(); ++y) {
-                for (int x = 0; x < layer.tiles[y].size(); ++x) {
-                    Tiled::Tile *tile = layer.tiles[y][x].tile;
+        for (auto &[name, layer] : tutorial_map.tile_layers) {
+            for (int y = 0; y < layer.size(); ++y) {
+                for (int x = 0; x < layer[y].size(); ++x) {
+                    Tiled::Tile *tile = layer[y][x].tile;
                     if (!tile)
                         continue;
                     renderer.push({float(x * tile->coords.w), float(y * tile->coords.h)}, tile->coords, tile->tex, 0,
-                                  layer.tiles[y][x].flags);
+                                  layer[y][x].flags);
                 }
             }
         }

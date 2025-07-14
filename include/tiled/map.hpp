@@ -30,22 +30,17 @@ namespace Tiled {
         static MapTile from_gid(uint32_t gid, std::vector<struct TilesetId>);
     };
 
-    struct Layer {
-        const char* name;
-        size_t width, height;
-        Grid<MapTile> tiles;
-    };
-
     struct Map {
+        template<typename T>
+        using Layers = std::unordered_map<std::string_view, T>;
+
         Map(class World& world, const char* map);
 
         RenderOrder render_order;
         size_t width, height;
         size_t tile_width, tile_height;
-        std::vector<Layer> layers;
-
-        Layer& operator[](std::string_view str);
-        Layer& operator[](size_t i);
+        Layers<Grid<MapTile>> tile_layers;
+        Layers<std::unordered_map<std::string_view, Math::Vec2<float>>> object_layers;
     };
 
     struct Tileset {

@@ -68,19 +68,19 @@ namespace Tiled {
 
         for (tinyxml2::XMLElement* layer = root->FirstChildElement("layer"); layer;
              layer = layer->NextSiblingElement("layer")) {
-            layers.emplace_back();
-            layer->QueryAttribute("width", &layers.back().width);
-            layer->QueryAttribute("height", &layers.back().height);
-            layer->QueryAttribute("name", &layers.back().name);
+            size_t width, height;
+            const char* name;
+            layer->QueryAttribute("width", &width);
+            layer->QueryAttribute("height", &height);
+            layer->QueryAttribute("name", &name);
 
             tinyxml2::XMLElement* data = layer->FirstChildElement("data");
             const char* encoding = "";
             data->QueryAttribute("encoding", &encoding);
 
+            Grid<MapTile>& grid = this->tile_layers[name] = {width, height};
             if (encoding == std::string_view{"csv"}) {
                 std::stringstream csv{data->GetText()};
-                Grid<MapTile>& grid = layers.back().tiles;
-                grid = {layers.back().width, layers.back().height};
 
                 uint32_t gid;
                 for (size_t y = 0; y < height; ++y) {
@@ -92,17 +92,22 @@ namespace Tiled {
                 }
             }
         }
-    }
 
-    Layer& Map::operator[](std::string_view str) {
-        for (Layer& layer : this->layers)
-            if (layer.name == str)
-                return layer;
-        throw std::runtime_error{"Map::operator[](std::string_view): Layer does not exist."};
-    }
+        for (tinyxml2::XMLElement* layer = root->FirstChildElement("objectgroup"); layer;
+             layer = layer->NextSiblingElement("objectgroup")) {
+            const char* name;
+            layer->QueryAttribute("name", &name);
+            auto& objects = this->object_layers[name];
 
-    Layer& Map::operator[](size_t i) {
-        return layers[i];
+            for (tinyxml2::XMLElement* object = layer->FirstChildElement("object"); object;
+                 object = object->NextSiblingElement("object")) {
+                auto& pos = objects[name];
+                object->QueryAttribute("x", &pos.x);
+                object->QueryAttribute("y", &pos.y);
+                object->QueryAttribute("name", &name);
+            }
+        }
+
     }
 
     Tileset::Tileset(World* world, const char* tileset) {
