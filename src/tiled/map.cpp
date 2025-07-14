@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <iostream>
 #include <sstream>
 #include <string_view>
 #include <filesystem>
@@ -101,13 +102,12 @@ namespace Tiled {
 
             for (tinyxml2::XMLElement* object = layer->FirstChildElement("object"); object;
                  object = object->NextSiblingElement("object")) {
+                object->QueryAttribute("name", &name);
                 auto& pos = objects[name];
                 object->QueryAttribute("x", &pos.x);
                 object->QueryAttribute("y", &pos.y);
-                object->QueryAttribute("name", &name);
             }
         }
-
     }
 
     Tileset::Tileset(World* world, const char* tileset) {
