@@ -46,7 +46,7 @@
 </data>
  </layer>
  <objectgroup id="2" name="Objects">
-  <object id="1" name="Player" x="64" y="224">
+  <object id="1" name="Player" x="96" y="224">
    <point/>
   </object>
   <object id="2" name="Button" x="160" y="224">
