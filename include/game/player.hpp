@@ -9,11 +9,13 @@
 class Player : public Square {
 public:
     static Math::Vec2<float> PLAYER_JUMP_FORCE;
-    static constexpr int PLAYER_SPD = 5000;
+    static constexpr int PLAYER_SPD = 2000;
 
     Player(Math::Vec2<float> pos, float mass = 70.0f, float side_length = 14.0f);
 
     void input();
+
+    void reset_y_force();
 
     void check_to_enable_player_jump(ArrayRef<VerletParticle> collided_object_particles);
 

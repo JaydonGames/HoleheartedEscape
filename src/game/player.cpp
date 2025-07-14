@@ -11,7 +11,7 @@ Math::Vec2<float> Player::PLAYER_JUMP_FORCE;
 
 Player::Player(Math::Vec2<float> pos, float mass, float side_length)
     : Square(pos, mass, side_length, false, true) {
-    PLAYER_JUMP_FORCE = Math::Vec2<float>(0, -15000.0f);
+    PLAYER_JUMP_FORCE = Math::Vec2<float>(0, -30000.0f);
     m_is_jumping = false;
 };
 
@@ -20,6 +20,7 @@ void Player::input() {
 
     if (!m_is_jumping) {
         if (keystate[SDL_SCANCODE_UP]) {
+            reset_y_force();
             apply_force(PLAYER_JUMP_FORCE);
             m_is_jumping = true;
         }
@@ -30,6 +31,12 @@ void Player::input() {
 
     if (keystate[SDL_SCANCODE_RIGHT]) {
         apply_force(Math::Vec2<float>(PLAYER_SPD, 0));
+    }
+}
+
+void Player::reset_y_force() {
+    for (VerletParticle particle : get_particles()) {
+        particle.force.y = 0.0f;
     }
 }
 
